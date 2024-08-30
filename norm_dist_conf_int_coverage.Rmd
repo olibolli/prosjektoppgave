@@ -1,0 +1,56 @@
+---
+title: "Testing conf.int coverage"
+author: "Olai Gaarn Skogen"
+date: "2024-05-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#Testing the coverage of standard frequentist confidence interval which assumes a t-dist for the mean estimator
+n = 100
+mean = 12
+sd = 4
+
+M = 100000
+
+covered = 0
+lower_samples = c()
+higher_samples = c()
+
+for(i in 1:M){
+  samples <- rexp(n, rate = 1/mean) # distribution to be tested
+  samples <- round(samples) # rounding to introduce discreteness into the sample
+  
+  estm_mean = mean(samples)
+  estm_var = var(samples)
+  estm_var_of_mean_estm = estm_var / n
+  
+  lower_bnd <- estm_mean + sqrt(estm_var_of_mean_estm)*qt(0.025, df = n)
+  higher_bnd <- estm_mean + sqrt(estm_var_of_mean_estm)*qt(0.975, df = n)
+  
+  if(lower_bnd < mean){
+    if(mean < higher_bnd){
+      covered = covered + 1
+    }
+  }
+  
+  lower_samples = c(lower_samples, lower_bnd)
+  higher_samples =  c(higher_samples, higher_bnd)
+}
+```
+
+```{r}
+coverage = covered / M
+
+hist(lower_samples, freq = TRUE)
+hist(higher_samples, freq = TRUE)
+
+coverage
+```
+
+
