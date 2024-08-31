@@ -14,19 +14,21 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Model
 
 ```{r}
-dmodel <- function(x, n, p){
+dmodel <- function(x, n = 10, p = 0.5){
+  print(n)
+  print(p)
   dbinom(x, n, p)
 }
 
-pmodel <- function(x, n, p, tail_left = TRUE){
+pmodel <- function(x, n = 10, p = 0.5, tail_left = TRUE){
   pbinom(x, n, p, tail_left)
 }
 
-sample_space <- function(n){
+sample_space <- function(n = 10){
   0:n
 }
 
-expected_val_model <- function(n, p){
+expected_val_model <- function(n = 10, p = 10){
   n*p
 }
 
@@ -35,29 +37,29 @@ expected_val_model <- function(n, p){
 ## Methods for computing the p-value
 
 ```{r}
-p_val_a <- function(x, n, p){
-  pr_tail_l = pmodel(x, n, p, tail_left = TRUE)
+p_val_a <- function(x, pmodel, dmodel, ...){
+  pr_tail_l = pmodel(x, ...)
   ## Use 1 - tail prob but add point prob
-  pr_tail_r = 1 - pr_tail_l + dmodel(x, n, p)
+  pr_tail_r = 1 - pr_tail_l + dmodel(x, ...)
   
   p_val = 2 * min(pr_tail_l, pr_tail_r, 1/2)
   p_val
 }
 
-p_val_a(7, 10, 0.7)
+p_val_a(7, pmodel, dmodel, n = 10, p = 0.7)
 ```
 
 ```{r}
-p_val_b <- function(x, n, p, multi_modal = TRUE){
-  W_x = dmodel(x, n, p)
+p_val_b <- function(x, dmodel, pmodel, sample_space, multi_modal = TRUE, ...){
+  W_x = dmodel(x, ...)
   
-  S = sample_space(n)
+  S = sample_space(...)
   p_val = 0
   
   if (multi_modal){
-    # If multimodal makes this a bad for this p-method
+    # If multimodal this would be a bad test p-method
     for(y in S){
-      W_y = dmodel(y, n, p)
+      W_y = dmodel(y, ...)
       if(W_y > W_x){
       }
       else{
@@ -73,7 +75,7 @@ p_val_b <- function(x, n, p, multi_modal = TRUE){
   p_val
 }
 
-p_val_b(3, 10, 0.3, TRUE)
+p_val_b(3, dmodel, pmodel, sample_space, multi_modal = TRUE, n = 10, p =0.3)
 ```
 
 ```{r}
@@ -317,6 +319,20 @@ comparison_p_vals(10, 0.9)
 
 
 ### Negative hypergeometric
+
+### Fishers exact test
+
+```{r}
+n_x = 19
+n_y = 19
+p_x = 0.2
+p_y = 0.2
+
+dmodel <- function(x, n, p){
+  
+}
+```
+
 
 ## Computing power analytically
 
