@@ -109,6 +109,9 @@ p_val_c <- function(x, n, p){
     }
     p_val = p_tail_r +  l_tail_max_smaller
   }
+  if(p_val > 1){ # If the distrbution is symmetric it will count the central event twice.
+    return(1)
+  }
   p_val
 }
 
@@ -158,7 +161,7 @@ p_val_obs <- function(x, n, p){
   p_val
 }
 
-
+p_val_obs(3, 10, 0.3)
 ```
 
 
@@ -274,7 +277,7 @@ expected_val_model <- function(n, p){
 ```{r}
 k = 10
 n_ = round(1 * k)
-m = round(m * 0.5 / 0.5)
+m = round(n_ * 0.5 / 0.5)
 
 phyper(10, m, n_, k, FALSE)
 
@@ -293,7 +296,7 @@ p_val_b(7, 10, 0.5)
 p_val_c(7, 10, 0.5)
 p_val_d(7, 10, 0.5)
 
-comparison_p_vals(10, 0.49)
+comparison_p_vals(10, 0.47)
 ```
 
 
@@ -317,6 +320,26 @@ comparison_p_vals(10, 0.9)
 
 
 ### Negative hypergeometric
+
+### Fishers exact test
+
+```{r}
+fisher_p_val_test <- function(n_x, n_y){
+  c_vec = 0:(n_x + n_y)
+  
+  p_df = data.frame(matrix(NA, nrow = n_x + n_y, ncol = n_x + n_y))
+  rownames(p_df) <- 0:(n_x + n_y)
+  colnames(p_df) <- 0:(n_x + n_y)
+  for(c in c_vec){
+    x_vec = 0:c
+    for(x in x_vec){
+      #Calculate p value
+      #Set p_value at place p_df[x, c]
+    }
+  }
+}
+```
+
 
 ## Computing power analytically
 
