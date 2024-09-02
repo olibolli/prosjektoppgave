@@ -11,6 +11,13 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(ggplot2)
+library(reshape2)
+library(tidyverse)
+```
+
+
 ## Model
 
 ```{r}
@@ -201,30 +208,55 @@ comparison_p_vals <- function(n, p){
     p_b = c(p_b, p_val_b(i, n, p))
     p_c = c(p_c, p_val_c(i, n, p))
     p_d = c(p_d, p_val_d(i, n, p))
-    p_obs = c(p_obs, p_val_obs(i, n, p))
+    #p_obs = c(p_obs, p_val_obs(i, n, p))
   }
   
-  df <- data.frame(p_a, p_b, p_c, p_d, p_obs)
-  rownames(df) <- 0:n
+  df <- data.frame(p_a, p_b, p_c, p_d)
+  df["x_val"] <- 0:n
   
   df
 }
 
-comparison_p_vals(10, 0.5)
+df <- comparison_p_vals(10, 0.5)
+
+df %>%
+  pivot_longer(-x_val, names_to = "variable", values_to = "P") %>%
+  ggplot(aes(x = x_val, y = P, fill = variable), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge")
 ```
 
 
 ### Binomial with p = 0.7
 
 ```{r}
-comparison_p_vals(10, 0.68)
+df <- comparison_p_vals(10, 0.68)
+
+df %>%
+  pivot_longer(-x_val, names_to = "variable", values_to = "P") %>%
+  ggplot(aes(x = x_val, y = P, fill = variable), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge")
 ```
 
 
-### Binomial with p = 0.9
+### Binomial with n = 40 p = 0.82
 
 ```{r}
-comparison_p_vals(10, 0.89)
+n = 40
+p = 0.82
+
+df <-comparison_p_vals(n, p)
+
+df %>%
+  pivot_longer(-x_val, names_to = "method", values_to = "P") %>%
+  ggplot(aes(x = x_val, y = P, fill = method)) +
+  geom_bar(stat = "identity", width = .75, position = "dodge") 
+  
+  
+
+# Plotting 
+df_points = data.frame(x = 0:n, y = dbinom(0:n, n, p))
+ggplot(df_points, aes(x = x, y = y)) +
+  geom_bar(stat = "identity")
 ```
 
 
@@ -315,7 +347,12 @@ pmodel(3, 10, 0.7, tail_left = FALSE) + dmodel(3, 10, 0.7)
 #### Unhyperness = 1, p = 0.9
 
 ```{r}
-comparison_p_vals(10, 0.9)
+df <- comparison_p_vals(10, 0.9)
+
+df %>%
+  pivot_longer(-x_val, names_to = "variable", values_to = "P") %>%
+  ggplot(aes(x = x_val, y = P, fill = variable), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge")
 ```
 
 
