@@ -1,0 +1,25 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+dfischers <- function(x, c, n_1 = 10, n_2 = 10){
+  dhyper(x, n_1, n_2, c)
+}
+
+pdischers <- function(x, c, n_1 = 10, n_2 = 10){
+  phyper(x, n_1, n_2, c)
+}
+```
+
+```{r}
+## Import the methods
+## Modify to support Fischer
+```
+
+```{r}
+## make the heatmap plotting function
+```
+
+
