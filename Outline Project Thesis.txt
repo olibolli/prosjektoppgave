@@ -1,0 +1,56 @@
+Outline Project Thesis
+
+Abstract
+
+Preface
+
+Introduction
+
+Background
+
+- Data with high level of discreteness where a two-sided p-value is wanted
+- Genome-wide studies ?
+- other examples ? Binary experiements ?
+- Problems with ad-hoc choice of p-values
+
+Theory
+
+- Define a valid p-value
+-- Note on how our discussion will be centered on two-sided p-values and thus it is not important with the supremum trick
+- Introduce the different methods to be used
+- The testobservator method
+-- NB: Explain the names of the different methods
+- Show an example of ad-hoc choice for p-values leading to an invalid p-value.
+
+Method
+
+- Doing arbitrary simulations
+-- Binomial distributions
+-- Hypergeometric distribution
+-- Etc.
+
+- Doing some proofs
+
+Results
+
+- Explanation double tail being strictly dominated by the tail-observator method
+- Some plots for general cases
+- "Unrobustness" in some cases where the value is a lot lower on one side while being higher on the other side for tail and point methods.
+- distance to mean method is very bad in very skewed distributions
+
+Discussion
+
+
+-- can we show symmetric unrobustness to be a repeated issue for tail and point ? How can we measure the unrobustness of a method ? 
+-- How do we eliminate unrobustness ?
+
+Conclusion
+
+- Double tail is bad and should not be used in discrete-cases.
+- ??
+
+Appendix
+
+- Proof of validity of all methods
+- Pseudo-code for testobservator methods
+- Proof of tail dominating double tail
