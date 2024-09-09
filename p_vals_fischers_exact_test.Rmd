@@ -4,19 +4,188 @@ output: html_notebook
 ---
 
 ```{r}
-dfischers <- function(x, c, n_1 = 10, n_2 = 10){
+library(ggplot2)
+library(reshape2)
+library(tidyverse)
+```
+
+
+```{r}
+dmodel <- function(x, c, n_1 = 10, n_2 = 10){
   dhyper(x, n_1, n_2, c)
 }
 
-pdischers <- function(x, c, n_1 = 10, n_2 = 10){
+pmodel <- function(x, c, n_1 = 10, n_2 = 10){
   phyper(x, n_1, n_2, c)
+}
+
+exp_val_model <- function(c, n_1, n_2){
+  c*n_1 /(n_1 + n_2)
 }
 ```
 
 ```{r}
 ## Import the methods
 ## Modify to support Fischer
+p_val_a <- function(x, c, n_1, n_2){
+  pr_tail_l = pmodel(x, c, n_1, n_2)
+  ## Use 1 - tail prob but add point prob
+  pr_tail_r = 1 - pr_tail_l + dmodel(x, c, n_1, n_2)
+  
+  p_val = 2 * min(pr_tail_l, pr_tail_r, 1/2)
+  p_val
+}
+
+p_val_a(7, 10, 10, 10)
+
+p_val_b <- function(x, c, n_1, n_2, multi_modal = TRUE){
+  W_x = dmodel(x, c, n_1, n_2)
+  
+  S = 0:c
+  p_val = 0
+  
+  if (multi_modal){
+    # If multimodal makes this a bad for this p-method
+    for(y in S){
+      W_y = dmodel(y, c, n_1, n_2)
+      if(W_y > W_x){
+      }
+      else{
+        p_y = W_y
+        p_val = p_val + p_y
+      }
+    }
+  }
+  else{
+    #WIP of effectivised computation
+  }
+  
+  p_val
+}
+
+p_val_b(3, 10, 10, 10, TRUE)
+
+# Assuming point mass function
+p_val_c <- function(x, c, n_1, n_2){
+  p_tail_l = pmodel(x, c, n_1, n_2)
+  p_tail_r = 1- p_tail_l + + dmodel(x, c, n_1, n_2)
+  epsilon = 1e-8
+  if (p_tail_l < p_tail_r + epsilon){
+    # Add the maximum right tail that is smaller than left tail
+    ## Start with 0 tail and add one point mass at a time until it grow bigger than left tail
+    r_tail_max_smaller = 0
+    y = c
+    sugg = r_tail_max_smaller
+    while(sugg < p_tail_l + epsilon){
+      r_tail_max_smaller = sugg # Accept suggestion
+      r_add = dmodel(y, c, n_1, n_2) # Calculate new point mass to be added
+      sugg = sugg + r_add # Propose new suggestion
+      y = y - 1 # Take one lower y-value
+    }
+    p_val = p_tail_l +  r_tail_max_smaller
+  }
+  else{
+    # Do the same thing but find maximum smaller left tail instead of right
+    l_tail_max_smaller = 0
+    y = 0
+    sugg = l_tail_max_smaller
+    while(sugg < p_tail_r + epsilon){
+      l_tail_max_smaller = sugg # Accept suggestion
+      l_add = dmodel(y, c, n_1, n_2) # Calculate new point mass to be added
+      sugg = sugg + l_add # Propose new suggestion
+      y = y + 1 # Take one higher y-value
+    }
+    p_val = p_tail_r +  l_tail_max_smaller
+  }
+  if(p_val > 1){ # If the distrbution is symmetric it will count the central event twice.
+    return(1)
+  }
+  p_val
+}
+
+p_val_c(7, 10, 10, 10)
+
+p_val_d <- function(x, c, n_1, n_2) {
+  exp_val = exp_val_model(c, n_1, n_2)
+  W_x = abs(x - exp_val)
+  
+  p_val = 0
+  S = 0:c
+  for(y in S){
+    W_y = abs(y - exp_val)
+    if(W_y < W_x){}
+    else{
+      p_val = p_val + dmodel(y, c, n_1, n_2)
+    }
+  }
+  p_val
+}
+
+p_val_d(7, 10, 10, 10)
 ```
+
+```{r}
+# Keeping it simple with bar plots
+comparison_p_vals <- function(c, n_1, n_2){
+  p_a = NULL
+  p_b = NULL
+  p_c = NULL
+  p_d = NULL
+
+  for(i in 0:c){
+    p_a = c(p_a, p_val_a(i, c, n_1, n_2))
+    p_b = c(p_b, p_val_b(i, c, n_1, n_2))
+    p_c = c(p_c, p_val_c(i, c, n_1, n_2))
+    p_d = c(p_d, p_val_d(i, c, n_1, n_2))
+  }
+  
+  df <- data.frame(p_a, p_b, p_c, p_d)
+  df["x_val"] <- 0:c
+  
+  df
+}
+
+df <- comparison_p_vals(22, 19, 11)
+
+df %>%
+  pivot_longer(-x_val, names_to = "variable", values_to = "P") %>%
+  ggplot(aes(x = x_val, y = P, fill = variable), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge")
+```
+```{r}
+# calculate power 
+power_calc <- function(p_1, p_2, n_1, n_2, a, method){
+  power = 0
+  
+  K = 0:(n_1 + n_2)
+  for(c in K){
+    # Calculate prob of c
+    prob_c = prob_c_calc(c, p_1, p_2, n_1, n_2)
+      
+    S = 0:c
+    for(i in S){
+      p_val = method(i, c, n_1, n_2)
+      if(a > p_val){
+        prob_i_given_c = dmodel(i, c, n_1, n_2)
+        power = power + prob_i_given_c * prob_c
+      }
+    }
+  }
+  power
+}
+
+prob_c_calc <- function(c, p_1, p_2, n_1, n_2){
+  prob_c = 0
+  for(i in 0:c){
+    prob_ic = dbinom(i, n_1, p_1) *dbinom(c-i, n_2, p_2)
+    prob_c = prob_c + prob_ic
+  }
+  prob_c
+}
+
+power_calc(0.1, 0.1, 220, 200, 0.05, p_val_a)
+```
+
 
 ```{r}
 ## make the heatmap plotting function
