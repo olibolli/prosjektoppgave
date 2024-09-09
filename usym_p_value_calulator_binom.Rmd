@@ -87,7 +87,7 @@ p_val_b(3, 10, 0.3, TRUE)
 # Assuming point mass function
 p_val_c <- function(x, n, p){
   p_tail_l = pmodel(x, n, p, tail_left = TRUE)
-  p_tail_r = pmodel(x, n, p, tail_left = FALSE) + dmodel(x, n, p) #Fix this
+  p_tail_r = 1 - p_tail_l + dmodel(x, n, p)
   epsilon = 1e-8
   if (p_tail_l < p_tail_r + epsilon){
     # Add the maximum right tail that is smaller than left tail
