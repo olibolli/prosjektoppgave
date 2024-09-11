@@ -123,6 +123,65 @@ p_val_c(7, 10, 0.68)
 ```
 
 ```{r}
+# Modifications of methods for optimized power calc
+p_val_c_power <- function(x, n, p, a = 0.05){
+  # This function will determine if the given experiment and data resulted in a rejection or not wrt to the hypothesis test/significance level
+  p_tail_l = pmodel(x, n, p)
+  p_tail_r = 1- p_tail_l + dmodel(x, n, p)
+  epsilon = 1e-8
+  if (p_tail_l < p_tail_r + epsilon){
+    if(p_tail_l > a){
+      # If the lowest tail value is higher than the significance level the null hypothesis is not rejected
+      return(1)
+    }
+    if(2*p_tail_l < a){
+      # If the highest tail value you add to the p_value is lower than half the null hypthesis is rejected
+      return(0)
+    }
+    # Add the maximum right tail that is smaller than left tail
+    ## Start with 0 tail and add one point mass at a time until it grow bigger than left tail
+    r_tail_max_smaller = 0
+    y = n
+    sugg = r_tail_max_smaller
+    while(sugg < p_tail_l + epsilon){
+      r_tail_max_smaller = sugg # Accept suggestion
+      r_add = dmodel(y, n, p) # Calculate new point mass to be added
+      sugg = sugg + r_add # Propose new suggestion
+      y = y - 1 # Take one lower y-value
+    }
+    p_val = p_tail_l +  r_tail_max_smaller
+  }
+  else{
+    if(p_tail_r > a){
+      # If the lowest tail value is higher than the significance level the test fails necessairly
+      return(1)
+    }
+    if(2*p_tail_r < a){
+      # If the highest tail value you add to the p_value is lower than half the null hypthesis is rejected
+      return(0)
+    }
+    # Do the same thing but find maximum smaller left tail instead of right
+    l_tail_max_smaller = 0
+    y = 0
+    sugg = l_tail_max_smaller
+    while(sugg < p_tail_r + epsilon){
+      l_tail_max_smaller = sugg # Accept suggestion
+      l_add = dmodel(y, n, p) # Calculate new point mass to be added
+      sugg = sugg + l_add # Propose new suggestion
+      y = y + 1 # Take one higher y-value
+    }
+    p_val = p_tail_r +  l_tail_max_smaller
+  }
+  if(p_val > 1){ # If the distrbution is symmetric it will count the central event twice.
+    return(1)
+  }
+  p_val
+}
+
+```
+
+
+```{r}
 p_val_d <- function(x, n, p) {
   exp_val = expected_val_model(n, p)
   W_x = abs(x - exp_val)
@@ -162,12 +221,14 @@ N = 1000
 P = (0:N)/N
 b_double = NULL
 b_point = NULL
+b_tail = NULL
 b_dist = NULL
 
 for(p in P){
   # Calculate power
   power_double = power_calc_binom(p_val_a, 20, p, .05)
   power_point = power_calc_binom(p_val_b, 20, p, .05)
+  power_tail = power_calc_binom_alt(p_val_c_power, 20, p, .05)
   power_dist = power_calc_binom(p_val_d, 20, p, .05)
     
   # Add power to the list
@@ -184,7 +245,7 @@ ggplot(data = df_power)+
 ```
 # Testing for a cross-section with p_0 = 0.5 and a = 0.5
 ```{r}
-power_calc_binom_alt <- function(method, n, p_true, a, p_0 = .7){
+power_calc_binom_alt <- function(method, n, p_true, a, p_0 = .71){
   power = 0
   for(x in 0:n){
     p_val = method(x, n, p_0)
@@ -197,28 +258,33 @@ power_calc_binom_alt <- function(method, n, p_true, a, p_0 = .7){
 
 N = 1000
 n = 10
+alpha = .05
 P = (0:N)/N
 b_double = NULL
 b_point = NULL
+b_tail = NULL
 b_dist = NULL
 
 for(p in P){
   # Calculate power
-  power_double = power_calc_binom_alt(p_val_a, n, p, .05)
-  power_point = power_calc_binom_alt(p_val_b, n, p, .05)
-  power_dist = power_calc_binom_alt(p_val_d, n, p, .05)
+  power_double = power_calc_binom_alt(p_val_a, n, p, alpha)
+  power_point = power_calc_binom_alt(p_val_b, n, p, alpha)
+  power_tail = power_calc_binom_alt(p_val_c_power, n, p, alpha)
+  power_dist = power_calc_binom_alt(p_val_d, n, p, alpha)
     
   # Add power to the list
   b_double = c(b_double, power_double)
   b_point = c(b_point, power_point)
+  b_tail = c(b_tail, power_tail)
   b_dist = c(b_dist, power_dist)
 }
 
-df_power <- data.frame(P, b_double, b_point, b_dist)
+df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 
 ggplot(data = df_power)+
   geom_line(aes(x = P, y = b_dist), color = "green")+
   geom_line(aes(x = P, y = b_point), color = "red")+
-  geom_line(aes(x = P, y = b_double), linetype = "dashed")
+  geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
+  geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")
 ```
 
