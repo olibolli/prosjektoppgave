@@ -285,6 +285,9 @@ ggplot(data = df_power)+
   geom_line(aes(x = P, y = b_dist), color = "green")+
   geom_line(aes(x = P, y = b_point), color = "red")+
   geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
-  geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")
+  geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")+
+  ggtitle("P_0 = 0.71")+
+  ylab("Probability of rejecting H_0")+
+  xlab("Actual value of P")
 ```
 
