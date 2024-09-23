@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(reshape2)
 library(tidyverse)
+library(plotly)
 ```
 
 ## Model for binomial
@@ -48,7 +49,7 @@ p_val_a <- function(x, c, n_1, n_2){
   p_val
 }
 
-p_val_a(7, 10, 0.7)
+p_val_a(6, 10, 7, 10)
 ```
 
 ```{r}
@@ -77,7 +78,7 @@ p_val_b <- function(x, c, n_1, n_2, multi_modal = TRUE){
   p_val
 }
 
-p_val_b(3, 10, 0.3, TRUE)
+p_val_b(3, 10, 6, 20, TRUE)
 ```
 
 ```{r}
@@ -119,7 +120,7 @@ p_val_c <- function(x, c, n_1, n_2){
   p_val
 }
 
-p_val_c(7, 10, 0.68)
+p_val_c(7, 10, 20, 14)
 ```
 
 ```{r}
@@ -198,25 +199,32 @@ p_val_d <- function(x, c, n_1, n_2) {
   p_val
 }
 
-p_val_d(7, 10, 0.7)
+p_val_d(6, 10, 20, 14)
 ```
 
 ## Calculating power
 
 ```{r}
-power_calc_binom <- function(method, c, n_1, n_2, a){
+
+power_calc_fischer_null_hyp_true <- function(method, p_both, n_1, n_2, a){
   power = 0
-  for(x in 0:n){
-    p_val = method(x, c, n_1, n_2)
-    if(p_val < a){
-      power = power + dmodel(x, c, n_1, n_2)
+  for(x in 0:n_1){
+    for(y in 0:n_2){
+      p_val = method(x, x+y, n_1, n_2)
+      if(p_val < a){
+        power = power + dbinom(x, n_1, p_both) * dbinom(y, n_2, p_both)
+      }
     }
   }
   power
 }
 
-power_calc_binom(p_val_d, 10, 0.82, 0.05)
+power_calc_fischer_null_hyp_true(p_val_c_power, 0.9, 10, 10, 0.05)
 
+```
+
+```{r}
+n = 10
 N = 1000
 P = (0:N)/N
 b_double = NULL
@@ -226,38 +234,43 @@ b_dist = NULL
 
 for(p in P){
   # Calculate power
-  power_double = power_calc_fischer(p_val_a, 20, p, .05)
-  power_point = power_calc_fischer(p_val_b, 20, p, .05)
-  power_tail = power_calc_fischer_alt(p_val_c_power, 20, p, .05)
-  power_dist = power_calc_fischer(p_val_d, 20, p, .05)
+  power_double = power_calc_fischer_null_hyp_true(p_val_a, p, n, n + 10, .05)
+  power_point = power_calc_fischer_null_hyp_true(p_val_b, p, n, n + 10, .05)
+  power_tail = power_calc_fischer_null_hyp_true(p_val_c_power, p, n, n +10, .05)
+  power_dist = power_calc_fischer_null_hyp_true(p_val_d, p, n, n +10, .05)
     
   # Add power to the list
   b_double = c(b_double, power_double)
   b_point = c(b_point, power_point)
+  b_tail = c(b_tail, power_tail)
   b_dist = c(b_dist, power_dist)
 }
 
-df_power <- data.frame(P, b_double, b_point, b_dist)
+df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 
 ggplot(data = df_power)+
   geom_point(aes(x = P, y = b_dist))+
-  geom_point(aes(x = P, y = b_point), color = "red")
+  geom_point(aes(x = P, y = b_point), color = "red")+
+  geom_point(aes(x = P, y = b_tail), color = "green")+
+  geom_point(aes(x = P, y = b_double), color = "blue")
 ```
-# Testing for a cross-section with p_0 = 0.5 and a = 0.5
+# Testing for a cross-section with p_0 = 0.5 and a = 0.05
 ```{r}
-power_calc_binom_alt <- function(method, n, p_true, a, p_0 = .71){
+power_calc_fischer_alt <- function(method, p_2, n_1, n_2, a, p_1 = .85){
   power = 0
-  for(x in 0:n){
-    p_val = method(x, n, p_0)
-    if(p_val < a){
-      power = power + dmodel(x, c, n_1, n_2)
+  for(x in 0:n_1){
+    for(y in 0:n_2){
+      p_val = method(x, x+y, n_1, n_2)
+      if(p_val < a){
+        power = power + dbinom(x, n_1, p_1) * dbinom(y, n_2, p_2)
+      }
     }
   }
   power
 }
 
-N = 1000
-n = 10
+N = 100
+n = 25
 alpha = .05
 P = (0:N)/N
 b_double = NULL
@@ -267,10 +280,10 @@ b_dist = NULL
 
 for(p in P){
   # Calculate power
-  power_double = power_calc_binom_alt(p_val_a, n, p, alpha)
-  power_point = power_calc_binom_alt(p_val_b, n, p, alpha)
-  power_tail = power_calc_binom_alt(p_val_c_power, n, p, alpha)
-  power_dist = power_calc_binom_alt(p_val_d, n, p, alpha)
+  power_double = power_calc_fischer_alt(p_val_a, p, n, 2*n, alpha)
+  power_point = power_calc_fischer_alt(p_val_b, p, n, 2*n, alpha)
+  power_tail = power_calc_fischer_alt(p_val_c_power, p, n, 2*n, alpha)
+  power_dist = power_calc_fischer_alt(p_val_d, p, n, 2*n, alpha)
     
   # Add power to the list
   b_double = c(b_double, power_double)
@@ -286,7 +299,38 @@ ggplot(data = df_power)+
   geom_line(aes(x = P, y = b_point), color = "red")+
   geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
   geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")+
-  ggtitle("P_0 = 0.71")+
+  ggtitle("P_1 is given")+
   ylab("Probability of rejecting H_0")+
-  xlab("Actual value of P")
+  xlab("Value of P_2")
 ```
+
+```{r}
+power_surface <- function(method, n_1, n_2, N, a){
+  power_mat <- matrix(0, N+1, N+1)
+  for(i in 0:N){
+    p_1 = i/N
+    for(j in 0:N){
+      p_2 = j/N
+      power_ij = power_calc_fischer_alt(method, p_2, n_1, n_2, a, p_1)
+      power_mat[i, j] <- power_ij
+    }
+  }
+  power_mat
+}
+
+power_surf_a <- power_surface(p_val_a, 40, 50, 20, .05)
+power_surf_b <- power_surface(p_val_b, 40, 50, 20, .05)
+power_surf_c <- power_surface(p_val_c_power, 40, 50, 20, 0.05)
+power_surf_d <- power_surface(p_val_d, 40, 50, 20, .05)
+
+```
+
+```{r}
+
+plot_power <- plot_ly(z = power_surf_a, type = "surface")
+plot_power <- plot_power %>% add_surface(z = power_surf_b, colorscale = list(c(0, 1), c("pink", "red")))
+plot_power <- plot_power %>% add_surface(z = power_surf_c, colorscale = list(c(0, 1), c("pink", "red")))
+#plot_power <- plot_power %>% add_surface(z = power_surf_d, colorscale = list(c(0, 1), c("tan", "blue")))
+plot_power
+```
+
