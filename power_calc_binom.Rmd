@@ -228,20 +228,23 @@ for(p in P){
   # Calculate power
   power_double = power_calc_binom(p_val_a, 20, p, .05)
   power_point = power_calc_binom(p_val_b, 20, p, .05)
-  power_tail = power_calc_binom_alt(p_val_c_power, 20, p, .05)
+  power_tail = power_calc_binom(p_val_c_power, 20, p, .05)
   power_dist = power_calc_binom(p_val_d, 20, p, .05)
     
   # Add power to the list
   b_double = c(b_double, power_double)
   b_point = c(b_point, power_point)
+  b_tail = c(b_tail, power_tail)
   b_dist = c(b_dist, power_dist)
 }
 
-df_power <- data.frame(P, b_double, b_point, b_dist)
-
+df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
+```
+```{r}
 ggplot(data = df_power)+
-  geom_point(aes(x = P, y = b_dist))+
-  geom_point(aes(x = P, y = b_point), color = "red")
+  geom_point(aes(x = P, y = b_double), color = "orange")
+
+  
 ```
 # Testing for a cross-section with p_0 = 0.5 and a = 0.5
 ```{r}
@@ -280,13 +283,15 @@ for(p in P){
 }
 
 df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
+```
 
+```{r}
 ggplot(data = df_power)+
   geom_line(aes(x = P, y = b_dist), color = "green")+
-  geom_line(aes(x = P, y = b_point), color = "red")+
+  geom_line(aes(x = P, y = b_point), color = "red", linetype = "dashed")+
   geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
   geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")+
-  ggtitle("P_0 = 0.71")+
+  ggtitle("P_0 = 0.71, n = 10")+
   ylab("Probability of rejecting H_0")+
   xlab("Actual value of P")
 ```
