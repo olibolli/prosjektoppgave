@@ -242,9 +242,53 @@ df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 ```{r}
 ggplot(data = df_power)+
-  geom_point(aes(x = P, y = b_double), color = "orange")
+  geom_point(aes(x = P, y = b_dist))
 
   
+```
+# Code to investigate rejection areas, especially for distance method
+```{r}
+rej_area_binom <- function(method, n, p, a){
+  power = 0
+  is_rej_area = NULL
+  
+  for(x in 0:n){
+    p_val = method(x, n, p)
+    if(p_val < a){
+      power = power + dbinom(x, n, p)
+      is_rej_area = c(is_rej_area, 1)
+    }
+    else{
+      is_rej_area = c(is_rej_area, 0)
+    }
+  }
+  is_rej_area
+}
+
+n = 20
+N = 1000
+mat = matrix(0, nrow = N +1, ncol = n + 1)
+
+for(i in 0:N){
+  p = i/N
+  rej_area_i = rej_area_binom(p_val_d, n, p, .05)
+  mat[i+1,] = rej_area_i
+}
+
+df_rej_area = melt(mat)
+colnames(df_rej_area) <- c("x", "y", "value")
+```
+
+```{r}
+
+df_rej_area
+
+df_rej_size = apply(mat, 1, sum)
+
+ggplot(data = df_rej_area, aes(x = x, y = y, fill = value)) + 
+  geom_tile()
+
+plot(x = P, y = df_rej_size)
 ```
 # Testing for a cross-section with p_0 = 0.5 and a = 0.5
 ```{r}
