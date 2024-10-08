@@ -201,17 +201,16 @@ comparison_p_vals <- function(n, p){
   p_b = NULL
   p_c = NULL
   p_d = NULL
-  p_obs = NULL
 
   for(i in 0:n){
     p_a = c(p_a, p_val_a(i, n, p))
     p_b = c(p_b, p_val_b(i, n, p))
     p_c = c(p_c, p_val_c(i, n, p))
     p_d = c(p_d, p_val_d(i, n, p))
-    #p_obs = c(p_obs, p_val_obs(i, n, p))
   }
   
   df <- data.frame(p_a, p_b, p_c, p_d)
+  colnames(df) <- c("​Double tail", "Point", "Tail", "Distance")  #Added zero width space for "Double tail" to be shown first in plot
   df["x_val"] <- 0:n
   
   df
@@ -220,9 +219,11 @@ comparison_p_vals <- function(n, p){
 df <- comparison_p_vals(10, 0.5)
 
 df %>%
-  pivot_longer(-x_val, names_to = "variable", values_to = "P") %>%
-  ggplot(aes(x = x_val, y = P, fill = variable), xlab = "Method") +
-  geom_bar(stat = "identity", width = .75, position = "dodge")
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = x_val, y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") + 
+  theme_classic()+
+  labs(x = "X", y = "p-value")
 ```
 
 
