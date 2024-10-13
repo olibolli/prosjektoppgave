@@ -52,38 +52,27 @@ p_val_b <- function(x, mu){
   p_val
 }
 
-p_val_b(5, 3)
-
 p_val_c <- function(x, mu){
   p_tail_l = pmodel(x, mu)
   p_tail_r = 1- p_tail_l + dmodel(x, mu)
   epsilon = 1e-8
+  
   if (p_tail_l < p_tail_r + epsilon){
-    # Add the maximum right tail that is smaller than left tail
-    ## Start with 0 tail and add one point mass at a time until it grow bigger than left tail
-    r_tail_max_smaller = 0
-    y = ceiling(2*mu)
-    sugg = r_tail_max_smaller
-    while(sugg < p_tail_l + epsilon){
-      r_tail_max_smaller = sugg # Accept suggestion
-      r_add = dmodel(y, c, n_1, n_2) # Calculate new point mass to be added
-      sugg = sugg + r_add # Propose new suggestion
-      y = y - 1 # Take one lower y-value
+    # Since the right tail has infinite support we must suggest a low enough tail value
+    y_sugg = ceiling(2*mu)
+    sugg_tail = 1 - pmodel(y_sugg, mu) # this will give P(X > y), i.e. P(X geq y-1)
+    while(sugg_tail > p_tail_l){
+      y_sugg = ceiling(2*y_sugg)
+      sugg_tail = 1 - pmodel(y_sugg, mu) # this will give P(X > y), i.e. P(X geq y-1)
     }
-    p_val = p_tail_l +  r_tail_max_smaller
+    # After a low enough value is reached we calculate the highest smaller right tail compared to the left tail
+    right_tail = max_lower_tail(y_sugg, sugg_tail, p_tail_l, mu)
+    p_val = p_tail_l + right_tail
   }
   else{
-    # Do the same thing but find maximum smaller left tail instead of right
-    l_tail_max_smaller = 0
-    y = 0
-    sugg = l_tail_max_smaller
-    while(sugg < p_tail_r + epsilon){
-      l_tail_max_smaller = sugg # Accept suggestion
-      l_add = dmodel(y, c, n_1, n_2) # Calculate new point mass to be added
-      sugg = sugg + l_add # Propose new suggestion
-      y = y + 1 # Take one higher y-value
-    }
-    p_val = p_tail_r +  l_tail_max_smaller
+    # For a left tail we can start at 0 and find the highest smaller left tail
+    left_tail = max_lower_tail(0, 0, p_tail_r, mu, left_tail = TRUE)
+    p_val = p_tail_r +  left_tail
   }
   if(p_val > 1){ # If the distrbution is symmetric it will count the central event twice.
     return(1)
@@ -91,15 +80,13 @@ p_val_c <- function(x, mu){
   p_val
 }
 
-max_lower_tail <- function(y_next, tail_y, w_x, mu, left_tail = TRUE, epsilon = 1e-8){
+max_lower_tail <- function(y_next, tail_y, W_x, mu, left_tail = FALSE, epsilon = 1e-8){
   sugg = tail_y
   y = y_next
     while(sugg < W_x + epsilon){
       tail_y = sugg # Accept suggestion
       add = dmodel(y, mu) # Calculate new point mass to be added
       sugg = sugg + add # Propose new suggestion
-      print(y)
-      print(sugg)
       if(left_tail){
         y = y + 1
       }
@@ -110,25 +97,116 @@ max_lower_tail <- function(y_next, tail_y, w_x, mu, left_tail = TRUE, epsilon = 
   tail_y
 }
 
+p_val_d <- function(x, mu) {
+  exp_val = mu
+  W_x = abs(x - mu)
+  
+  r = mu + W_x
+  l = mu - W_x
+  if(l < 1){
+    p_val = 1 - ppois(r-1, mu)
+    return(p_val)
+  }
+  p_val = 1 - ppois(r-1, mu) + ppois(l-1, mu)
+  p_val
+}
+
 ```
 
 ```{r}
-W_x = ppois(1, 5)
+# Test functions for the tail method
+p_val_a(3, 3)
+p_val_a(5, 3)
+
+p_val_b(3, 3)
+p_val_b(5, 3)
+
+print("____")
+W_x = ppois(3, 5)
 
 W_x
 
 1- ppois(10, 5)
 
-max_lower_tail(9, 1- ppois(10, 5), W_x, 5, left_tail = FALSE)
+max_lower_tail(10, 1-ppois(10, 5), W_x, 5, left_tail = FALSE)
 
-W_x = 1-ppois(10, 5)
+print("-----")
+W_x = 1-ppois(7, 5)
 
 W_x
 
-max_lower_tail(1, 1- ppois(0, 5), W_x, 5, left_tail = TRUE)
+ppois(0, 5)
 
+
+max_lower_tail(1, ppois(0, 5), W_x, 5, left_tail = TRUE)
+
+print("____")
+```
+
+```{r}
+p_val_c(3, 3)
+p_val_c(5, 3)
+```
+
+```{r}
+p_val_d(3, 3)
+
+p_val_d(5, 3)
+```
+
+```{r}
+comparison_p_vals <- function(mu, n){
+  p_a = NULL
+  p_b = NULL
+  p_c = NULL
+  p_d = NULL
+
+  for(i in 0:n){
+    p_a = c(p_a, p_val_a(i, mu))
+    p_b = c(p_b, p_val_b(i, mu))
+    p_c = c(p_c, p_val_c(i, mu))
+    p_d = c(p_d, p_val_d(i, mu))
+  }
+  
+  df <- data.frame(p_a, p_b, p_c, p_d)
+  colnames(df) <- c("​Double tail", "Point", "Tail", "Distance")  #Added zero width space for "Double tail" to be shown first in plot
+  df["x_val"] <- 0:n
+  
+  df
+}
+
+df <- comparison_p_vals(12, 20)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = x_val, y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") + 
+  theme_classic()+
+  labs(x = "X", y = "p-value")
+```
+
+```{r}
+power_calc_poisson_null_hyp_true <- function(method, mu, a){
+  power = 1
+  n = 3*mu
+  for(x in 0:n){
+    p_val = method(x, mu)
+    if(p_val > a){
+      power = power - dmodel(x, mu)
+    }
+  }
+  power
+}
+
+power_calc_poisson_null_hyp_true(p_val_b, 10, .05)
+```
+
+```{r}
 
 ```
+
+
+
 
 
 
