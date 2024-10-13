@@ -1,0 +1,134 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(reshape2)
+library(tidyverse)
+```
+
+```{r}
+dmodel <- function(x, mu){
+  dpois(x, mu)
+}
+
+pmodel <- function(x, mu){
+  ppois(x, mu)
+}
+
+```
+
+```{r}
+p_val_a <- function(x, mu){
+  pr_tail_l = pmodel(x, mu)
+  ## Use 1 - tail prob but add point prob
+  pr_tail_r = 1 - pr_tail_l + dmodel(x, mu)
+  
+  p_val = 2 * min(pr_tail_l, pr_tail_r, 1/2)
+  p_val
+}
+
+p_val_b <- function(x, mu){
+  # Implementation assumes a decreasing point probability P(X = x) for increasing x after the mean value has passed
+  W_x = dmodel(x, mu)
+  p_val = 1
+  y = 0
+  cond = TRUE
+  while(cond){
+    W_y = dmodel(y, mu)
+    if(W_y > W_x){
+      p_y = W_y
+      p_val = p_val - p_y
+    }
+    else{
+      less_than_mean = (y > mu)
+      cond = !less_than_mean
+    }
+    # Preparing next round
+    y = y +1
+  }
+  p_val
+}
+
+p_val_b(5, 3)
+
+p_val_c <- function(x, mu){
+  p_tail_l = pmodel(x, mu)
+  p_tail_r = 1- p_tail_l + dmodel(x, mu)
+  epsilon = 1e-8
+  if (p_tail_l < p_tail_r + epsilon){
+    # Add the maximum right tail that is smaller than left tail
+    ## Start with 0 tail and add one point mass at a time until it grow bigger than left tail
+    r_tail_max_smaller = 0
+    y = ceiling(2*mu)
+    sugg = r_tail_max_smaller
+    while(sugg < p_tail_l + epsilon){
+      r_tail_max_smaller = sugg # Accept suggestion
+      r_add = dmodel(y, c, n_1, n_2) # Calculate new point mass to be added
+      sugg = sugg + r_add # Propose new suggestion
+      y = y - 1 # Take one lower y-value
+    }
+    p_val = p_tail_l +  r_tail_max_smaller
+  }
+  else{
+    # Do the same thing but find maximum smaller left tail instead of right
+    l_tail_max_smaller = 0
+    y = 0
+    sugg = l_tail_max_smaller
+    while(sugg < p_tail_r + epsilon){
+      l_tail_max_smaller = sugg # Accept suggestion
+      l_add = dmodel(y, c, n_1, n_2) # Calculate new point mass to be added
+      sugg = sugg + l_add # Propose new suggestion
+      y = y + 1 # Take one higher y-value
+    }
+    p_val = p_tail_r +  l_tail_max_smaller
+  }
+  if(p_val > 1){ # If the distrbution is symmetric it will count the central event twice.
+    return(1)
+  }
+  p_val
+}
+
+max_lower_tail <- function(y_next, tail_y, w_x, mu, left_tail = TRUE, epsilon = 1e-8){
+  sugg = tail_y
+  y = y_next
+    while(sugg < W_x + epsilon){
+      tail_y = sugg # Accept suggestion
+      add = dmodel(y, mu) # Calculate new point mass to be added
+      sugg = sugg + add # Propose new suggestion
+      print(y)
+      print(sugg)
+      if(left_tail){
+        y = y + 1
+      }
+      else{
+        y = y - 1 
+      }
+    }
+  tail_y
+}
+
+```
+
+```{r}
+W_x = ppois(1, 5)
+
+W_x
+
+1- ppois(10, 5)
+
+max_lower_tail(9, 1- ppois(10, 5), W_x, 5, left_tail = FALSE)
+
+W_x = 1-ppois(10, 5)
+
+W_x
+
+max_lower_tail(1, 1- ppois(0, 5), W_x, 5, left_tail = TRUE)
+
+
+```
+
+
+

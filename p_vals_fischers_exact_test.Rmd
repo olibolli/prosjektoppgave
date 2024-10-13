@@ -267,4 +267,3 @@ p_val_c_power <- function(x, c, n_1, n_2, a = 0.05){
 ```{r}
 ## make the heatmap plotting function
 ```
-
