@@ -188,7 +188,7 @@ df %>%
 ```{r}
 power_calc_poisson_null_hyp_true <- function(method, mu, a){
   power = 1
-  n = 3*mu
+  n = ceiling(max(3*mu, mu^2)) # This is kind of dodgy
   for(x in 0:n){
     p_val = method(x, mu)
     if(p_val > a){
@@ -202,8 +202,48 @@ power_calc_poisson_null_hyp_true(p_val_b, 10, .05)
 ```
 
 ```{r}
+compare_power_null_hyp_true <- function(P){
+  b_double = NULL
+  b_point = NULL
+  b_tail = NULL
+  b_dist = NULL
+
+  for(p in P){
+    # Calculate power
+    power_double = power_calc_poisson_null_hyp_true(p_val_a, p, .05)
+    power_point = power_calc_poisson_null_hyp_true(p_val_b, p, .05)
+    power_tail = power_calc_poisson_null_hyp_true(p_val_c, p, .05)
+    power_dist = power_calc_poisson_null_hyp_true(p_val_d, p, .05)
+    
+    # Add power to the list
+    b_double = c(b_double, power_double)
+    b_point = c(b_point, power_point)
+    b_tail = c(b_tail, power_tail)
+    b_dist = c(b_dist, power_dist)
+  }
+
+  df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
+  df_power
+}
+
+N = 20
+P = 10 *(1:N)/N
+
+df_power_null_hyp <- compare_power_null_hyp_true(P)
+```
+
+```{r}
+ggplot(data = df_power_null_hyp)+
+  geom_line(aes(x = P, y = b_dist))+
+  geom_line(aes(x = P, y = b_point), color = "red")+
+  geom_line(aes(x = P, y = b_tail), color = "green")+
+  geom_line(aes(x = P, y = b_double), color = "blue")
+```
+
+```{r}
 
 ```
+
 
 
 
