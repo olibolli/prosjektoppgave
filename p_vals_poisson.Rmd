@@ -101,13 +101,15 @@ p_val_d <- function(x, mu) {
   exp_val = mu
   W_x = abs(x - mu)
   
-  r = mu + W_x
-  l = mu - W_x
-  if(l < 1){
-    p_val = 1 - ppois(r-1, mu)
+  r = floor(mu + W_x)
+  l = ceiling(mu - W_x)
+  # Rejection region will be x lower than l
+  # and x higher than r
+  if(l <= 0){
+    p_val = 1 - ppois(r-1, mu) # 1 - P(X <= r-1) =  P(X > r-1) = P(X >= r)
     return(p_val)
   }
-  p_val = 1 - ppois(r-1, mu) + ppois(l-1, mu)
+  p_val = 1 - ppois(r-1, mu) + ppois(l, mu) # 1 - P(X <= r-1) + P(X <= l) = P(X >= r) + P(X <= l)
   p_val
 }
 
@@ -239,6 +241,19 @@ ggplot(data = df_power_null_hyp)+
   geom_line(aes(x = P, y = b_tail), color = "green")+
   geom_line(aes(x = P, y = b_double), color = "blue")
 ```
+
+```{r}
+print(P)
+
+X_vals = 0:20
+for(x in X_vals){
+  print(p_val_d(x, 4.5))
+}
+
+1 + ppois(0, 4.5) - ppois(9, 4.5)
+
+```
+
 
 ```{r}
 
