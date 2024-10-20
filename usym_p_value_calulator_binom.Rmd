@@ -220,9 +220,10 @@ df <- comparison_p_vals(10, 0.5)
 
 df %>%
   pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
-  ggplot(aes(x = x_val, y = P, fill = Method), xlab = "Method") +
-  geom_bar(stat = "identity", width = .75, position = "dodge") + 
-  theme_classic()+
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  theme_classic() +
   labs(x = "X", y = "p-value")
 ```
 
@@ -230,13 +231,47 @@ df %>%
 ### Binomial with p = 0.7
 
 ```{r}
-df <- comparison_p_vals(10, 0.68)
+df <- comparison_p_vals(10, 0.7)
 
 df %>%
-  pivot_longer(-x_val, names_to = "variable", values_to = "P") %>%
-  ggplot(aes(x = x_val, y = P, fill = variable), xlab = "Method") +
-  geom_bar(stat = "identity", width = .75, position = "dodge")
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  theme_classic() +
+  labs(x = "X", y = "p-value")
 ```
+```{r}
+df <- comparison_p_vals(10, 0.9)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  theme_classic() +
+  labs(x = "X", y = "p-value")
+```
+### Binomial with n = 30, p = 0.7
+```{r}
+df <- comparison_p_vals(30, 0.7)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  ylim(0, 0.00005)
+  
+```
+
+### Binomial with n = 30, p = 0.9
+### Binomial with n = 50, p = 0.7
+### Binomial with n = 50, p = 0.9
+### Binomial with n = 100, p = 0.7
+### Binomial with n = 100, p = 0.9
 
 
 ### Binomial with n = 40 p = 0.82
@@ -248,9 +283,12 @@ p = 0.82
 df <-comparison_p_vals(n, p)
 
 df %>%
-  pivot_longer(-x_val, names_to = "method", values_to = "P") %>%
-  ggplot(aes(x = x_val, y = P, fill = method)) +
-  geom_bar(stat = "identity", width = .75, position = "dodge") 
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  theme_classic() +
+  labs(x = "X", y = "p-value")
   
   
 

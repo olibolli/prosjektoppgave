@@ -110,6 +110,9 @@ p_val_d <- function(x, mu) {
     return(p_val)
   }
   p_val = 1 - ppois(r-1, mu) + ppois(l, mu) # 1 - P(X <= r-1) + P(X <= l) = P(X >= r) + P(X <= l)
+  if(p_val > 1){
+    return(1)
+  }
   p_val
 }
 
@@ -177,7 +180,7 @@ comparison_p_vals <- function(mu, n){
   df
 }
 
-df <- comparison_p_vals(12, 20)
+df <- comparison_p_vals(12.1, 20)
 
 df %>%
   pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
@@ -239,7 +242,8 @@ ggplot(data = df_power_null_hyp)+
   geom_line(aes(x = P, y = b_dist))+
   geom_line(aes(x = P, y = b_point), color = "red")+
   geom_line(aes(x = P, y = b_tail), color = "green")+
-  geom_line(aes(x = P, y = b_double), color = "blue")
+  geom_line(aes(x = P, y = b_double), color = "blue")+
+  theme_classic()
 ```
 
 ```{r}
