@@ -69,7 +69,7 @@ p_val_b(3, 10, 10, 10, TRUE)
 p_val_c <- function(x, c, n_1, n_2){
   p_tail_l = pmodel(x, c, n_1, n_2)
   p_tail_r = 1- p_tail_l + dmodel(x, c, n_1, n_2)
-  epsilon = 1e-8
+  epsilon = 1e-64
   if (p_tail_l < p_tail_r + epsilon){
     # Add the maximum right tail that is smaller than left tail
     ## Start with 0 tail and add one point mass at a time until it grow bigger than left tail
@@ -140,6 +140,7 @@ comparison_p_vals <- function(c, n_1, n_2){
   }
   
   df <- data.frame(p_a, p_b, p_c, p_d)
+  colnames(df) <- c("​Double tail", "Point", "Tail", "Distance")  #Added zero width space for "Double tail" to be shown first in plot
   df["x_val"] <- 0:c
   
   df
@@ -148,10 +149,292 @@ comparison_p_vals <- function(c, n_1, n_2){
 df <- comparison_p_vals(22, 19, 11)
 
 df %>%
-  pivot_longer(-x_val, names_to = "variable", values_to = "P") %>%
-  ggplot(aes(x = x_val, y = P, fill = variable), xlab = "Method") +
-  geom_bar(stat = "identity", width = .75, position = "dodge")
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
 ```
+```{r}
+df <-comparison_p_vals(20, 20, 20)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(5, 25, 20)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(10, 25, 20)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(15, 25, 20)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(22, 25, 20)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(10, 45, 40)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(25, 45, 40)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(42, 45, 40)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(5, 30, 15)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(15, 30, 15)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+```{r}
+df <-comparison_p_vals(22, 30, 15)
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "p-value")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  geom_hline(yintercept = .05)
+  #scale_x_discrete(limits = factor(13:28))
+  
+
+df %>%
+  pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
+  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  geom_bar(stat = "identity", width = .75, position = "dodge") +
+  theme_classic() +
+  labs(x = "X", y = "- log(p)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  #scale_x_discrete(limits = factor(13:28))
+  geom_hline(yintercept = -log(5e-2))
+```
+
+
 ```{r}
 # calculate power 
 power_calc <- function(p_1, p_2, n_1, n_2, a, method){
