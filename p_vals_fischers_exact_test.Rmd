@@ -69,7 +69,7 @@ p_val_b(3, 10, 10, 10, TRUE)
 p_val_c <- function(x, c, n_1, n_2){
   p_tail_l = pmodel(x, c, n_1, n_2)
   p_tail_r = 1- p_tail_l + dmodel(x, c, n_1, n_2)
-  epsilon = 1e-16
+  epsilon = 1e-64
   if (p_tail_l < p_tail_r + epsilon){
     # Add the maximum right tail that is smaller than left tail
     ## Start with 0 tail and add one point mass at a time until it grow bigger than left tail

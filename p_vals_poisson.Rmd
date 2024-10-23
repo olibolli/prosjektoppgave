@@ -273,7 +273,7 @@ ggplot(data = df_power_null_hyp)+
   geom_line(aes(x = P, y = b_dist), linetype = "twodash")+
   geom_line(aes(x = P, y = b_point), color = "red", linetype = "dotdash")+
   geom_line(aes(x = P, y = b_tail), color = "darkgreen", linetype = "dotted")+
-  #geom_line(aes(x = P, y = b_double), color = "blue", linetype = "dashed")+
+  geom_line(aes(x = P, y = b_double), color = "blue", linetype = "dashed")+
   theme_classic()
 ```
 

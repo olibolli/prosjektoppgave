@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(reshape2)
 library(tidyverse)
+library(plotly)
+library(GGally)
 ```
 
 ## Model for binomial
@@ -195,6 +197,12 @@ p_val_d <- function(x, n, p) {
       p_val = p_val + dmodel(y, n, p)
     }
   }
+  
+  # håndtering av ties
+  if(2*W_x == round(2*W_x)){
+    # p_val = p_val - dmodel(exp_val-W_x, n, p)
+  }
+  
   p_val
 }
 
@@ -218,7 +226,7 @@ power_calc_binom <- function(method, n, p, a){
 power_calc_binom(p_val_d, 10, 0.82, 0.05)
 
 N = 1000
-P = (0:N)/N
+P = 0:N/N
 b_double = NULL
 b_point = NULL
 b_tail = NULL
@@ -246,6 +254,11 @@ ggplot(data = df_power)+
 
   
 ```
+
+```{r}
+
+```
+
 # Code to investigate rejection areas, especially for distance method
 ```{r}
 rej_area_binom <- function(method, n, p, a){
@@ -339,4 +352,59 @@ ggplot(data = df_power)+
   ylab("Probability of rejecting H_0")+
   xlab("Actual value of P")
 ```
+```{r}
+power_surface <- function(method, n, N, a){
+  power_mat <- matrix(0, N+1, N+1)
+  for(i in 0:N){
+    p_hyp = i/N
+    for(j in 0:N){
+      p_act = j/N
+      power_ij = power_calc_binom_alt(method, n, p_true = p_act, a = a, p_0 = p_hyp)
+      power_mat[i, j] <- power_ij
+    }
+  }
+  power_mat
+}
+
+power_surf_a <- power_surface(p_val_a, 10, 200, .05)
+power_surf_b <- power_surface(p_val_b, 10, 200, .05)
+power_surf_c <- power_surface(p_val_c_power, 10, 200, 0.05)
+power_surf_d <- power_surface(p_val_d, 10, 200, .05)
+
+```
+
+```{r}
+make_heatmap<- function(df){
+  melt_df = melt(df)
+  colnames(melt_df) <- c("x", "y", "value")
+  plot <- ggplot(melt_df, aes(x = x, y = y, fill = value))+
+    geom_tile()+
+    scale_fill_continuous(limits=c(-1,1))
+  return(plot)
+}
+
+plotList = list()
+
+plotList[[1]] = make_heatmap(power_surf_a - power_surf_b)
+plotList[[2]] = make_heatmap(power_surf_a - power_surf_c)
+plotList[[3]] = make_heatmap(power_surf_a - power_surf_d)
+plotList[[4]] = ggally_text(paste("Empty"))
+plotList[[5]] = make_heatmap(power_surf_b - power_surf_c)
+plotList[[6]] = make_heatmap(power_surf_b - power_surf_d)
+plotList[[7]] = ggally_text(paste("Empty"))
+plotList[[8]] = ggally_text(paste("Empty"))
+plotList[[9]] = make_heatmap(power_surf_c - power_surf_d)
+
+ggmatrix(plotList, 3, 3)
+```
+
+
+```{r}
+plot_power <- plot_ly(z = power_surf_a, type = "surface")
+plot_power <- plot_power %>% add_surface(z = power_surf_b, colorscale = list(c(0, 1), c("pink", "red")))
+plot_power <- plot_power %>% add_surface(z = power_surf_c, colorscale = list(c(0, 1), c("pink", "red")))
+#plot_power <- plot_power %>% add_surface(z = power_surf_d, colorscale = list(c(0, 1), c("tan", "blue")))
+plot_power
+```
+
 

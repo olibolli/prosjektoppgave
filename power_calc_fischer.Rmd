@@ -14,6 +14,7 @@ library(ggplot2)
 library(reshape2)
 library(tidyverse)
 library(plotly)
+library(GGally)
 ```
 
 ## Model for binomial
@@ -324,6 +325,32 @@ power_surf_c <- power_surface(p_val_c_power, 40, 50, 20, 0.05)
 power_surf_d <- power_surface(p_val_d, 40, 50, 20, .05)
 
 ```
+
+```{r}
+make_heatmap<- function(df){
+  melt_df = melt(df)
+  colnames(melt_df) <- c("x", "y", "value")
+  plot <- ggplot(melt_df, aes(x = x, y = y, fill = value))+
+    geom_tile()+
+    scale_fill_continuous(limits=c(-1,1))
+  return(plot)
+}
+
+plotList = list()
+
+plotList[[1]] = make_heatmap(power_surf_a - power_surf_b)
+plotList[[2]] = make_heatmap(power_surf_a - power_surf_c)
+plotList[[3]] = make_heatmap(power_surf_a - power_surf_d)
+plotList[[4]] = ggally_text(paste("Empty"))
+plotList[[5]] = make_heatmap(power_surf_b - power_surf_c)
+plotList[[6]] = make_heatmap(power_surf_b - power_surf_d)
+plotList[[7]] = ggally_text(paste("Empty"))
+plotList[[8]] = ggally_text(paste("Empty"))
+plotList[[9]] = make_heatmap(power_surf_c - power_surf_d)
+
+ggmatrix(plotList, 3, 3)
+```
+
 
 ```{r}
 
