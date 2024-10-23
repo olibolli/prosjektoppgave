@@ -108,8 +108,13 @@ p_val_d <- function(x, mu) {
   # Handeling ties
   if(mu + W_x == round(mu + W_x)){
     if(mu - W_x == round(mu - W_x)){
-      print(mu - W_x)
-      l = l -1
+      # We are in the tied sceneraio and we want to either exclude y = l depending on if X = l or x = r
+      if(x == r){
+        #l = l -1
+      }
+      else{
+        
+      }
     }
   }
   
@@ -255,18 +260,20 @@ compare_power_null_hyp_true <- function(P){
   df_power
 }
 
-N = 20
+N = 30
 P = 10 *(1:N)/N
 
 df_power_null_hyp <- compare_power_null_hyp_true(P)
 ```
 
 ```{r}
+print(df_power_null_hyp)
+
 ggplot(data = df_power_null_hyp)+
-  geom_line(aes(x = P, y = b_dist))+
-  geom_line(aes(x = P, y = b_point), color = "red")+
-  geom_line(aes(x = P, y = b_tail), color = "green")+
-  geom_line(aes(x = P, y = b_double), color = "blue")+
+  geom_line(aes(x = P, y = b_dist), linetype = "twodash")+
+  geom_line(aes(x = P, y = b_point), color = "red", linetype = "dotdash")+
+  geom_line(aes(x = P, y = b_tail), color = "darkgreen", linetype = "dotted")+
+  #geom_line(aes(x = P, y = b_double), color = "blue", linetype = "dashed")+
   theme_classic()
 ```
 
@@ -275,10 +282,11 @@ print(P)
 
 X_vals = 0:20
 for(x in X_vals){
-  print(p_val_d(x, 4.5))
+  print(c(x,p_val_d(x, 9)))
 }
 
-1 + ppois(0, 4.5) - ppois(9, 4.5)
+p_val_d(3, 9)
+1 - ppois(14, 9)
 
 ```
 
