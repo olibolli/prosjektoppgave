@@ -349,8 +349,9 @@ ggplot(data = df_power)+
   geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
   geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")+
   ggtitle("P_0 = 0.71, n = 10")+
-  ylab("Probability of rejecting H_0")+
-  xlab("Actual value of P")
+  ylab("Power")+
+  xlab("P")+
+  theme_classic()
 ```
 ```{r}
 power_surface <- function(method, n, N, a){
@@ -377,25 +378,28 @@ power_surf_d <- power_surface(p_val_d, 10, 200, .05)
 make_heatmap<- function(df){
   melt_df = melt(df)
   colnames(melt_df) <- c("x", "y", "value")
-  plot <- ggplot(melt_df, aes(x = x, y = y, fill = value))+
+  plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = value))+
     geom_tile()+
-    scale_fill_continuous(limits=c(-1,1))
+    scale_fill_gradient(low = "white", high = "red", limits = c(-1, 1))+
+    theme_classic()
   return(plot)
 }
 
 plotList = list()
 
 plotList[[1]] = make_heatmap(power_surf_a - power_surf_b)
-plotList[[2]] = make_heatmap(power_surf_a - power_surf_c)
-plotList[[3]] = make_heatmap(power_surf_a - power_surf_d)
-plotList[[4]] = ggally_text(paste("Empty"))
+plotList[[2]] = NULL
+plotList[[3]] = NULL
+plotList[[4]] = make_heatmap(power_surf_a - power_surf_c)
 plotList[[5]] = make_heatmap(power_surf_b - power_surf_c)
-plotList[[6]] = make_heatmap(power_surf_b - power_surf_d)
-plotList[[7]] = ggally_text(paste("Empty"))
-plotList[[8]] = ggally_text(paste("Empty"))
+plotList[[6]] = NULL
+plotList[[7]] = make_heatmap(power_surf_a - power_surf_d)
+plotList[[8]] = make_heatmap(power_surf_b - power_surf_d)
 plotList[[9]] = make_heatmap(power_surf_c - power_surf_d)
 
-ggmatrix(plotList, 3, 3)
+ggmatrix(plotList, 3, 3,
+         xAxisLabels = c("Double tail", "Point", "Tail"),
+         yAxisLabels = c("Point", "Tail", "Distance"))
 ```
 
 
