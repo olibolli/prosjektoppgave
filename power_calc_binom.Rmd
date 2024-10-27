@@ -11,10 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(ggplot2)
-library(reshape2)
-library(tidyverse)
-library(plotly)
-library(GGally)
+library(reshape2) 
+library(tidyverse) 
+library(plotly) #3d plots
+library(GGally) #ggmatrix
+library(glue) 
 ```
 
 ## Model for binomial
@@ -250,7 +251,9 @@ df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 ```{r}
 ggplot(data = df_power)+
-  geom_point(aes(x = P, y = b_dist))
+  geom_point(aes(x = P, y = b_dist))+
+  labs(x = "*P*<sub>0</sub>", y = "Type 1 Error", title = "Distance method")+
+  theme(axis.title = element_markdown())
 
   
 ```
@@ -339,11 +342,11 @@ for(p in P){
   b_dist = c(b_dist, power_dist)
 }
 
-df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
+df_power_slice <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 
 ```{r}
-ggplot(data = df_power)+
+ggplot(data = df_power_slice)+
   geom_line(aes(x = P, y = b_dist), color = "green")+
   geom_line(aes(x = P, y = b_point), color = "red", linetype = "dashed")+
   geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
@@ -377,29 +380,38 @@ power_surf_d <- power_surface(p_val_d, 10, 200, .05)
 ```{r}
 make_heatmap<- function(df){
   melt_df = melt(df)
-  colnames(melt_df) <- c("x", "y", "value")
-  plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = value))+
+  colnames(melt_df) <- c("x", "y", "power_diff")
+  plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = power_diff))+
     geom_tile()+
     scale_fill_gradient(low = "white", high = "red", limits = c(-1, 1))+
+    labs(x = "P_0", y = "True p")+
     theme_classic()
   return(plot)
 }
 
 plotList = list()
 
-plotList[[1]] = make_heatmap(power_surf_a - power_surf_b)
+plotList[[1]] = make_heatmap(power_surf_a - power_surf_a)
 plotList[[2]] = NULL
 plotList[[3]] = NULL
-plotList[[4]] = make_heatmap(power_surf_a - power_surf_c)
-plotList[[5]] = make_heatmap(power_surf_b - power_surf_c)
-plotList[[6]] = NULL
-plotList[[7]] = make_heatmap(power_surf_a - power_surf_d)
-plotList[[8]] = make_heatmap(power_surf_b - power_surf_d)
-plotList[[9]] = make_heatmap(power_surf_c - power_surf_d)
+plotList[[4]] = NULL
+plotList[[5]] = make_heatmap(power_surf_a - power_surf_b)
+plotList[[6]] = make_heatmap(power_surf_b - power_surf_b) 
+plotList[[7]] = NULL
+plotList[[8]] = NULL
+plotList[[9]] = make_heatmap(power_surf_a - power_surf_c)
+plotList[[10]] = make_heatmap(power_surf_b - power_surf_c)
+plotList[[11]] = make_heatmap(power_surf_c - power_surf_c) 
+plotList[[12]] = NULL
+plotList[[13]] = make_heatmap(power_surf_a - power_surf_d)
+plotList[[14]] = make_heatmap(power_surf_b - power_surf_d)
+plotList[[15]] = make_heatmap(power_surf_c - power_surf_d)
+plotList[[16]] = make_heatmap(power_surf_d - power_surf_d)
 
-ggmatrix(plotList, 3, 3,
-         xAxisLabels = c("Double tail", "Point", "Tail"),
-         yAxisLabels = c("Point", "Tail", "Distance"))
+ggmatrix(plotList, 4, 4,
+         xAxisLabels = c("Double tail", "Point", "Tail", "Distance"),
+         yAxisLabels = c("Double tail", "Point", "Tail", "Distance"), 
+         legend = grab_legend(plotList[[1]]))
 ```
 
 
