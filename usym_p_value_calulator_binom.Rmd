@@ -170,6 +170,20 @@ p_val_obs <- function(x, n, p){
 
 p_val_obs(3, 10, 0.3)
 ```
+```{r}
+observator_b <- function(x, n, p){
+  dbinom(x, n, p)
+}
+observator_c <-function(x, n, p){
+  p_tail_l = pmodel(x, n, p)
+  p_tail_r = 1 - p_tail_l + dmodel(x, n, p)
+  min(p_tail_r, p_tail_l)
+}
+
+observator_b(10, 10, 0.7)
+observator_c(10, 10, 0.7)
+
+```
 
 
 ## Testing some different models

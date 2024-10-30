@@ -16,6 +16,7 @@ library(tidyverse)
 library(plotly) #3d plots
 library(GGally) #ggmatrix
 library(glue) 
+library(ggtext)
 ```
 
 ## Model for binomial
@@ -251,8 +252,8 @@ df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 ```{r}
 ggplot(data = df_power)+
-  geom_point(aes(x = P, y = b_dist))+
-  labs(x = "*P*<sub>0</sub>", y = "Type 1 Error", title = "Distance method")+
+  geom_point(aes(x = P, y = b_double))+
+  labs(x = "*P*<sub>0</sub>", y = "Type 1 Error", title = "Double tail method")+
   theme(axis.title = element_markdown())
 
   
@@ -301,10 +302,12 @@ df_rej_area
 
 df_rej_size = apply(mat, 1, sum)
 
-ggplot(data = df_rej_area, aes(x = x, y = y, fill = value)) + 
-  geom_tile()
+ggplot(data = df_rej_area, aes(x = x/N, y = y, fill = as.factor(value))) + 
+  geom_tile()+
+  labs(y = "X", x = "P", title = "Rejection area distance method", fill = "Rejection")
 
-plot(x = P, y = df_rej_size)
+plot(x = P, y = df_rej_size, title(main = "Size of rejection area"), ylab = "#points in rejection area")
+  
 ```
 # Testing for a cross-section with p_0 = 0.5 and a = 0.5
 ```{r}
@@ -346,15 +349,14 @@ df_power_slice <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 
 ```{r}
-ggplot(data = df_power_slice)+
-  geom_line(aes(x = P, y = b_dist), color = "green")+
-  geom_line(aes(x = P, y = b_point), color = "red", linetype = "dashed")+
-  geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
-  geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")+
-  ggtitle("P_0 = 0.71, n = 10")+
-  ylab("Power")+
-  xlab("P")+
-  theme_classic()
+colnames(df_power_slice) <- c("P", "​Double tail", "Point", "Tail", "Distance")
+
+df_power_slice %>%
+pivot_longer(cols = -P, values_to = "Power", names_to = "Method") %>%
+  ggplot()+
+  geom_line(aes(x = P, y = Power, colour = Method, linetype = Method))+
+  labs(x= "True *P*", title = "*P*<sub>0</sub> = 0.71, *n* = 10")+
+  theme(axis.title = element_markdown(), title = element_markdown())
 ```
 ```{r}
 power_surface <- function(method, n, N, a){
@@ -407,6 +409,8 @@ plotList[[13]] = make_heatmap(power_surf_a - power_surf_d)
 plotList[[14]] = make_heatmap(power_surf_b - power_surf_d)
 plotList[[15]] = make_heatmap(power_surf_c - power_surf_d)
 plotList[[16]] = make_heatmap(power_surf_d - power_surf_d)
+
+plotList[[10]]
 
 ggmatrix(plotList, 4, 4,
          xAxisLabels = c("Double tail", "Point", "Tail", "Distance"),

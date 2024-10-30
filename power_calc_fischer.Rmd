@@ -15,6 +15,8 @@ library(reshape2)
 library(tidyverse)
 library(plotly)
 library(GGally)
+library(ggtext)
+library(glue)
 ```
 
 ## Model for binomial
@@ -225,8 +227,8 @@ power_calc_fischer_null_hyp_true(p_val_c_power, 0.9, 10, 10, 0.05)
 ```
 
 ```{r}
-n = 10
-N = 1000
+n = 100
+N = 100
 P = (0:N)/N
 b_double = NULL
 b_point = NULL
@@ -235,10 +237,10 @@ b_dist = NULL
 
 for(p in P){
   # Calculate power
-  power_double = power_calc_fischer_null_hyp_true(p_val_a, p, n, n + 10, .05)
-  power_point = power_calc_fischer_null_hyp_true(p_val_b, p, n, n + 10, .05)
-  power_tail = power_calc_fischer_null_hyp_true(p_val_c_power, p, n, n +10, .05)
-  power_dist = power_calc_fischer_null_hyp_true(p_val_d, p, n, n +10, .05)
+  power_double = power_calc_fischer_null_hyp_true(p_val_a, p, n, n + 40, .05)
+  power_point = power_calc_fischer_null_hyp_true(p_val_b, p, n, n + 40, .05)
+  power_tail = power_calc_fischer_null_hyp_true(p_val_c_power, p, n, n +40, .05)
+  power_dist = power_calc_fischer_null_hyp_true(p_val_d, p, n, n +40, .05)
     
   # Add power to the list
   b_double = c(b_double, power_double)
@@ -248,16 +250,20 @@ for(p in P){
 }
 
 df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
+```
 
+```{r}
 ggplot(data = df_power)+
-  geom_point(aes(x = P, y = b_dist))+
-  geom_point(aes(x = P, y = b_point), color = "red")+
-  geom_point(aes(x = P, y = b_tail), color = "green")+
-  geom_point(aes(x = P, y = b_double), color = "blue")
+  geom_point(aes(x = P, y = b_dist), alpha = 0.8)+
+  geom_point(aes(x = P, y = b_point), color = "red", alpha = 0.6)+
+  geom_point(aes(x = P, y = b_tail), color = "green", alpha = 0.3)+
+  geom_point(aes(x = P, y = b_double), color = "blue", alpha = 0.8)+
+  labs(x = "*P*<sub>1</sub> = *P*<sub>2</sub>", y = "Type 1 Error", title = glue("*n*<sub>1</sub> = {n} / *n*<sub>2</sub> = {n +40}"))+
+  theme(axis.title = element_markdown(), title = element_markdown())
 ```
 # Testing for a cross-section with p_0 = 0.5 and a = 0.05
 ```{r}
-power_calc_fischer_alt <- function(method, p_2, n_1, n_2, a, p_1 = .85){
+power_calc_fischer_alt <- function(method, p_2, n_1, n_2, a, p_1 = .05){
   power = 0
   for(x in 0:n_1){
     for(y in 0:n_2){
@@ -271,7 +277,7 @@ power_calc_fischer_alt <- function(method, p_2, n_1, n_2, a, p_1 = .85){
 }
 
 N = 100
-n = 25
+n = 40
 alpha = .05
 P = (0:N)/N
 b_double = NULL
@@ -281,10 +287,10 @@ b_dist = NULL
 
 for(p in P){
   # Calculate power
-  power_double = power_calc_fischer_alt(p_val_a, p, n, 2*n, alpha)
-  power_point = power_calc_fischer_alt(p_val_b, p, n, 2*n, alpha)
-  power_tail = power_calc_fischer_alt(p_val_c_power, p, n, 2*n, alpha)
-  power_dist = power_calc_fischer_alt(p_val_d, p, n, 2*n, alpha)
+  power_double = power_calc_fischer_alt(p_val_a, p, n, n +10, alpha)
+  power_point = power_calc_fischer_alt(p_val_b, p, n, n +10, alpha)
+  power_tail = power_calc_fischer_alt(p_val_c_power, p, n, n +10, alpha)
+  power_dist = power_calc_fischer_alt(p_val_d, p, n, n +10, alpha)
     
   # Add power to the list
   b_double = c(b_double, power_double)
@@ -294,15 +300,18 @@ for(p in P){
 }
 
 df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
+```
 
-ggplot(data = df_power)+
-  geom_line(aes(x = P, y = b_dist), color = "green")+
-  geom_line(aes(x = P, y = b_point), color = "red")+
-  geom_line(aes(x = P, y = b_tail), color = "blue", linetype = "dashed")+
-  geom_line(aes(x = P, y = b_double), color = "orange", linetype = "dashed")+
-  ggtitle("P_1 is given")+
-  ylab("Probability of rejecting H_0")+
-  xlab("Value of P_2")
+```{r}
+colnames(df_power) <- c("P", "​Double tail", "Point", "Tail", "Distance") 
+
+df_power %>%
+  pivot_longer(cols = -P, values_to = "Power", names_to = "Method") %>%
+  ggplot()+
+  geom_line(aes(x = P, y = Power, colour = Method, linetype = Method))+
+  labs(x= "*P*<sub>2</sub>", title = "*P*<sub>1</sub> = 0.05, *n*<sub>1</sub> = 40 / *n*<sub>2</sub> = 50")+
+  theme(axis.title = element_markdown(), title = element_markdown())
+  
 ```
 
 ```{r}
@@ -329,26 +338,40 @@ power_surf_d <- power_surface(p_val_d, 40, 50, 20, .05)
 ```{r}
 make_heatmap<- function(df){
   melt_df = melt(df)
-  colnames(melt_df) <- c("x", "y", "value")
-  plot <- ggplot(melt_df, aes(x = x, y = y, fill = value))+
+  colnames(melt_df) <- c("x", "y", "power_diff")
+  plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = power_diff))+
     geom_tile()+
-    scale_fill_continuous(limits=c(-1,1))
+    scale_fill_gradient(low = "white", high = "red", limits = c(-.1, .1))+
+    labs(x = "P_0", y = "True p")+
+    theme_classic()
   return(plot)
 }
 
 plotList = list()
 
-plotList[[1]] = make_heatmap(power_surf_a - power_surf_b)
-plotList[[2]] = make_heatmap(power_surf_a - power_surf_c)
-plotList[[3]] = make_heatmap(power_surf_a - power_surf_d)
-plotList[[4]] = ggally_text(paste("Empty"))
-plotList[[5]] = make_heatmap(power_surf_b - power_surf_c)
-plotList[[6]] = make_heatmap(power_surf_b - power_surf_d)
-plotList[[7]] = ggally_text(paste("Empty"))
-plotList[[8]] = ggally_text(paste("Empty"))
-plotList[[9]] = make_heatmap(power_surf_c - power_surf_d)
+plotList[[1]] = make_heatmap(power_surf_a - power_surf_a)
+plotList[[2]] = NULL
+plotList[[3]] = NULL
+plotList[[4]] = NULL
+plotList[[5]] = make_heatmap(power_surf_a - power_surf_b)
+plotList[[6]] = make_heatmap(power_surf_b - power_surf_b) 
+plotList[[7]] = NULL
+plotList[[8]] = NULL
+plotList[[9]] = make_heatmap(power_surf_a - power_surf_c)
+plotList[[10]] = make_heatmap(power_surf_b - power_surf_c)
+plotList[[11]] = make_heatmap(power_surf_c - power_surf_c) 
+plotList[[12]] = NULL
+plotList[[13]] = make_heatmap(power_surf_a - power_surf_d)
+plotList[[14]] = make_heatmap(power_surf_b - power_surf_d)
+plotList[[15]] = make_heatmap(power_surf_c - power_surf_d)
+plotList[[16]] = make_heatmap(power_surf_d - power_surf_d)
 
-ggmatrix(plotList, 3, 3)
+plotList[[5]]
+
+ggmatrix(plotList, 4, 4,
+         xAxisLabels = c("Double tail", "Point", "Tail", "Distance"),
+         yAxisLabels = c("Double tail", "Point", "Tail", "Distance"), 
+         legend = grab_legend(plotList[[1]]))
 ```
 
 

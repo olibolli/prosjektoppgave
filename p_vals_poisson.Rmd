@@ -289,10 +289,70 @@ p_val_d(3, 9)
 1 - ppois(14, 9)
 
 ```
-
+# alternate hypothesis / getting power function
 
 ```{r}
+power_calc_poisson_alt <- function(method, p_true, a, p_0 = 3.1){
+  power = 1
+  # subtract the probability of being in the acceptance region
+  n = ceiling(max(3*p_true, p_true^2)) # This is kind of dodgy
+  for(x in 0:n){
+    p_val = method(x, p_true)
+    if(p_val < a){
+      power = power - dpois(x, p_true)
+    }
+  }
+  power
+}
 
+N = 100
+alpha = .05
+P = 10*(0:N)/N
+b_double = NULL
+b_point = NULL
+b_tail = NULL
+b_dist = NULL
+
+for(p in P){
+  # Calculate power
+  power_double = power_calc_poisson_alt(p_val_a, p, alpha)
+  power_point = power_calc_poisson_alt(p_val_b, p,  alpha)
+  power_tail = power_calc_poisson_alt(p_val_c, p,  alpha)
+  power_dist = power_calc_poisson_alt(p_val_d, p, alpha)
+    
+  # Add power to the list
+  b_double = c(b_double, power_double)
+  b_point = c(b_point, power_point)
+  b_tail = c(b_tail, power_tail)
+  b_dist = c(b_dist, power_dist)
+}
+
+df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
+```
+
+
+
+
+
+# Surface / heatmap plots
+```{r}
+power_surface <- function(method, max_p, N, a){
+  power_mat <- matrix(0, N+1, N+1)
+  for(i in 0:N){
+    p_1 = max_p*i/N
+    for(j in 0:N){
+      p_2 = max_p*j/N
+      power_ij = power_calc_poisson_alt(method, p_2, a, p_1)
+      power_mat[i, j] <- power_ij
+    }
+  }
+  power_mat
+}
+
+power_surf_a <- power_surface(p_val_a, 50, 20, .05)
+power_surf_b <- power_surface(p_val_b, 50, 20, .05)
+power_surf_c <- power_surface(p_val_c, 50, 20, 0.05)
+power_surf_d <- power_surface(p_val_d, 50, 20, .05)
 ```
 
 
