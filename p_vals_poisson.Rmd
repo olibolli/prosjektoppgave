@@ -31,20 +31,58 @@ p_val_a <- function(x, mu){
 }
 
 p_val_b <- function(x, mu){
-  # Implementation assumes a decreasing point probability P(X = x) for increasing x after the mean value has passed
+  # Implementation assumes a decreasing point probability P(X = x) for increasing x after the mode has passed
   W_x = dmodel(x, mu)
   p_val = 1
+  
+  # Removing probabilites lower than P(X = x)
   y = 0
   cond = TRUE
   while(cond){
     W_y = dmodel(y, mu)
     if(W_y > W_x){
+      # Removing the probability
       p_y = W_y
       p_val = p_val - p_y
     }
     else{
-      less_than_mean = (y > mu)
-      cond = !less_than_mean
+      # Checking if the loop should be ended
+      ## By being in the loop we know that W_y <= W_x
+      mode = floor(mu)
+      passed_mode = (y > mode)
+      cond = !passed_mode
+    }
+    # Preparing next round
+    y = y +1
+  }
+  p_val
+}
+
+p_val_b_power <- function(x, mu, alpha){
+  # Implementation assumes a decreasing point probability P(X = x) for increasing x after the mode has passed
+  W_x = dmodel(x, mu)
+  if(W_x > alpha){
+    return(1)
+  }
+  
+  p_val = 1
+  
+  # Removing probabilites lower than P(X = x)
+  y = 0
+  cond = TRUE
+  while(cond){
+    W_y = dmodel(y, mu)
+    if(W_y > W_x){
+      # Removing the probability
+      p_y = W_y
+      p_val = p_val - p_y
+    }
+    else{
+      # Checking if the loop should be ended
+      ## By being in the loop we know that W_y <= W_x
+      mode = floor(mu)
+      passed_mode = (y > mode)
+      cond = !passed_mode
     }
     # Preparing next round
     y = y +1
@@ -97,6 +135,39 @@ max_lower_tail <- function(y_next, tail_y, W_x, mu, left_tail = FALSE, epsilon =
   tail_y
 }
 
+p_val_c_power <- function(x, mu, alpha){
+  p_tail_l = pmodel(x, mu)
+  p_tail_r = 1- p_tail_l + dmodel(x, mu)
+  epsilon = 1e-8
+  
+  # Giving immediate non-significance if W_x is too high
+  if(min(p_tail_l, p_tail_r) > alpha){
+    return(1)
+  }
+  
+  if (p_tail_l < p_tail_r + epsilon){
+    # Since the right tail has infinite support we must suggest a low enough tail value
+    y_sugg = ceiling(2*mu)
+    sugg_tail = 1 - pmodel(y_sugg, mu) # this will give P(X > y), i.e. P(X geq y-1)
+    while(sugg_tail > p_tail_l){
+      y_sugg = ceiling(2*y_sugg)
+      sugg_tail = 1 - pmodel(y_sugg, mu) # this will give P(X > y), i.e. P(X geq y-1)
+    }
+    # After a low enough value is reached we calculate the highest smaller right tail compared to the left tail
+    right_tail = max_lower_tail(y_sugg, sugg_tail, p_tail_l, mu)
+    p_val = p_tail_l + right_tail
+  }
+  else{
+    # For a left tail we can start at 0 and find the highest smaller left tail
+    left_tail = max_lower_tail(0, 0, p_tail_r, mu, left_tail = TRUE)
+    p_val = p_tail_r +  left_tail
+  }
+  if(p_val > 1){ # If the distrbution is symmetric it will count the central event twice.
+    return(1)
+  }
+  p_val
+}
+
 p_val_d <- function(x, mu) {
   exp_val = mu
   W_x = abs(x - mu)
@@ -130,7 +201,6 @@ p_val_d <- function(x, mu) {
   }
   p_val
 }
-
 ```
 
 ```{r}
@@ -351,7 +421,7 @@ power_surface <- function(method, max_p, N, a){
 
 power_surf_a <- power_surface(p_val_a, 50, 20, .05)
 power_surf_b <- power_surface(p_val_b, 50, 20, .05)
-power_surf_c <- power_surface(p_val_c, 50, 20, 0.05)
+power_surf_c <- power_surface(p_val_c, 50, 20, .05)
 power_surf_d <- power_surface(p_val_d, 50, 20, .05)
 ```
 
