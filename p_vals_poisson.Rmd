@@ -7,6 +7,9 @@ output: html_notebook
 library(ggplot2)
 library(reshape2)
 library(tidyverse)
+library(GGally)
+library(ggtext)
+library(glue)
 ```
 
 ```{r}
@@ -58,7 +61,7 @@ p_val_b <- function(x, mu){
   p_val
 }
 
-p_val_b_power <- function(x, mu, alpha){
+p_val_b_power <- function(x, mu, alpha = .05){
   # Implementation assumes a decreasing point probability P(X = x) for increasing x after the mode has passed
   W_x = dmodel(x, mu)
   if(W_x > alpha){
@@ -135,7 +138,7 @@ max_lower_tail <- function(y_next, tail_y, W_x, mu, left_tail = FALSE, epsilon =
   tail_y
 }
 
-p_val_c_power <- function(x, mu, alpha){
+p_val_c_power <- function(x, mu, alpha = .05){
   p_tail_l = pmodel(x, mu)
   p_tail_r = 1- p_tail_l + dmodel(x, mu)
   epsilon = 1e-8
@@ -362,13 +365,15 @@ p_val_d(3, 9)
 # alternate hypothesis / getting power function
 
 ```{r}
-power_calc_poisson_alt <- function(method, p_true, a, p_0 = 3.1){
+p0 = 8.6
+power_calc_poisson_alt <- function(method, p_true, a, p_0 = p0){
   power = 1
   # subtract the probability of being in the acceptance region
-  n = ceiling(max(3*p_true, p_true^2)) # This is kind of dodgy
+  n = ceiling(max(3*p_0, p_0^2)) # This is kind of dodgy
   for(x in 0:n){
-    p_val = method(x, p_true)
-    if(p_val < a){
+    p_val = method(x, p_0)
+    if(p_val > a){
+      # The null hypothesis is not rejected in this case
       power = power - dpois(x, p_true)
     }
   }
@@ -377,7 +382,7 @@ power_calc_poisson_alt <- function(method, p_true, a, p_0 = 3.1){
 
 N = 100
 alpha = .05
-P = 10*(0:N)/N
+P = 20*(0:N)/N
 b_double = NULL
 b_point = NULL
 b_tail = NULL
@@ -386,8 +391,8 @@ b_dist = NULL
 for(p in P){
   # Calculate power
   power_double = power_calc_poisson_alt(p_val_a, p, alpha)
-  power_point = power_calc_poisson_alt(p_val_b, p,  alpha)
-  power_tail = power_calc_poisson_alt(p_val_c, p,  alpha)
+  power_point = power_calc_poisson_alt(p_val_b_power, p, alpha)
+  power_tail = power_calc_poisson_alt(p_val_c_power, p,  alpha)
   power_dist = power_calc_poisson_alt(p_val_d, p, alpha)
     
   # Add power to the list
@@ -401,6 +406,17 @@ df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 
 
+```{r}
+colnames(df_power) <- c("P", "​Double tail", "Point", "Tail", "Distance") 
+
+df_power %>%
+  pivot_longer(cols = -P, values_to = "Power", names_to = "Method") %>%
+  ggplot()+
+  geom_line(aes(x = P, y = Power, colour = Method, linetype = Method))+
+  labs(x= "*P*", title = glue("*P*<sub>0</sub> = {p0}"))+
+  theme(axis.title = element_markdown(), title = element_markdown())
+  
+```
 
 
 
@@ -419,12 +435,51 @@ power_surface <- function(method, max_p, N, a){
   power_mat
 }
 
-power_surf_a <- power_surface(p_val_a, 50, 20, .05)
-power_surf_b <- power_surface(p_val_b, 50, 20, .05)
-power_surf_c <- power_surface(p_val_c, 50, 20, .05)
-power_surf_d <- power_surface(p_val_d, 50, 20, .05)
+power_surf_a <- power_surface(p_val_a, 20, 50, .05)
+power_surf_b <- power_surface(p_val_b_power, 20, 50, .05)
+power_surf_c <- power_surface(p_val_c_power, 20, 50, .05)
+power_surf_d <- power_surface(p_val_d, 20, 50, .05)
 ```
 
+
+```{r}
+make_heatmap<- function(df){
+  melt_df = melt(df)
+  colnames(melt_df) <- c("x", "y", "power_diff")
+  plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = power_diff))+
+    geom_tile()+
+    scale_fill_gradient2(low = "green", mid = "white", high = "red", limits = c(-.1, .1))+
+    labs(x = "P_0", y = "True p")+
+    theme_classic()
+  return(plot)
+}
+
+plotList = list()
+
+plotList[[1]] = make_heatmap(power_surf_a - power_surf_a)
+plotList[[2]] = NULL
+plotList[[3]] = NULL
+plotList[[4]] = NULL
+plotList[[5]] = make_heatmap(power_surf_a - power_surf_b)
+plotList[[6]] = make_heatmap(power_surf_b - power_surf_b) 
+plotList[[7]] = NULL
+plotList[[8]] = NULL
+plotList[[9]] = make_heatmap(power_surf_a - power_surf_c)
+plotList[[10]] = make_heatmap(power_surf_b - power_surf_c)
+plotList[[11]] = make_heatmap(power_surf_c - power_surf_c) 
+plotList[[12]] = NULL
+plotList[[13]] = make_heatmap(power_surf_a - power_surf_d)
+plotList[[14]] = make_heatmap(power_surf_b - power_surf_d)
+plotList[[15]] = make_heatmap(power_surf_c - power_surf_d)
+plotList[[16]] = make_heatmap(power_surf_d - power_surf_d)
+
+plotList[[5]]
+
+ggmatrix(plotList, 4, 4,
+         xAxisLabels = c("Double tail", "Point", "Tail", "Distance"),
+         yAxisLabels = c("Double tail", "Point", "Tail", "Distance"), 
+         legend = grab_legend(plotList[[1]]))
+```
 
 
 
