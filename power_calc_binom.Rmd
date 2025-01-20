@@ -252,16 +252,12 @@ df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 ```{r}
 ggplot(data = df_power)+
-  geom_point(aes(x = P, y = b_double))+
-  labs(x = "*P*<sub>0</sub>", y = "Type 1 Error", title = "Double tail method")+
-  theme(axis.title = element_markdown())
-
-  
-```
-
-```{r}
+  geom_point(aes(x = P, y = b_tail))+
+  labs(x = "*\u03B8*<sub>0</sub>", y = "Type 1 Error", title = "Tail method")+
+  theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), title = element_markdown(size = 16), legend.title = element_markdown(size = 14), legend.text = element_text(size = 12))
 
 ```
+
 
 # Code to investigate rejection areas, especially for distance method
 ```{r}
@@ -309,9 +305,9 @@ ggplot(data = df_rej_area, aes(x = x/N, y = y, fill = as.factor(value))) +
 plot(x = P, y = df_rej_size, title(main = "Size of rejection area"), ylab = "#points in rejection area")
   
 ```
-# Testing for a cross-section with p_0 = 0.5 and a = 0.5
+# Testing for a cross-section with p_0 = 0.71 and a = 0.5
 ```{r}
-power_calc_binom_alt <- function(method, n, p_true, a, p_0 = .71){
+power_calc_binom_alt <- function(method, n, p_true, a, p_0 = 0.71){
   power = 0
   for(x in 0:n){
     p_val = method(x, n, p_0)
@@ -355,8 +351,8 @@ df_power_slice %>%
 pivot_longer(cols = -P, values_to = "Power", names_to = "Method") %>%
   ggplot()+
   geom_line(aes(x = P, y = Power, colour = Method, linetype = Method))+
-  labs(x= "True *P*", title = "*P*<sub>0</sub> = 0.71, *n* = 10")+
-  theme(axis.title = element_markdown(), title = element_markdown())
+  labs(x= "True \u03b8", title = "\u03b8<sub>0</sub> = 0.71, *n* = 10")+
+  theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), title = element_markdown(size = 16), legend.title = element_markdown(size = 14), legend.text = element_text(size = 12))
 ```
 ```{r}
 power_surface <- function(method, n, N, a){
@@ -366,7 +362,7 @@ power_surface <- function(method, n, N, a){
     for(j in 0:N){
       p_act = j/N
       power_ij = power_calc_binom_alt(method, n, p_true = p_act, a = a, p_0 = p_hyp)
-      power_mat[i, j] <- power_ij
+      power_mat[i+1, j+1] <- power_ij
     }
   }
   power_mat
@@ -385,9 +381,11 @@ make_heatmap<- function(df){
   colnames(melt_df) <- c("x", "y", "power_diff")
   plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = power_diff))+
     geom_tile()+
-    scale_fill_gradient(low = "white", high = "red", limits = c(-1, 1))+
-    labs(x = "P_0", y = "True p")+
-    theme_classic()
+    scale_fill_gradient2(low = "green", mid = "white", high = "red", limits = c(-1, 1))+
+    labs(x = "\u03b8<sub>0</sub>", y = "True \u03b8", fill = "\u0394 Power")+
+    theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), title = element_markdown(size = 16), legend.title = element_markdown(size = 14), legend.text = element_text(size = 12))+
+    scale_x_continuous(breaks = c(0, 0.5, 1)) +
+    scale_y_continuous(breaks = c(0, 0.5, 1))
   return(plot)
 }
 
@@ -416,6 +414,10 @@ ggmatrix(plotList, 4, 4,
          xAxisLabels = c("Double tail", "Point", "Tail", "Distance"),
          yAxisLabels = c("Double tail", "Point", "Tail", "Distance"), 
          legend = grab_legend(plotList[[1]]))
+```
+
+```{r}
+print((power_surf_b - power_surf_c)[,78])
 ```
 
 

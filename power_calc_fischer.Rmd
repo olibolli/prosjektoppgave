@@ -227,7 +227,8 @@ power_calc_fischer_null_hyp_true(p_val_c_power, 0.9, 10, 10, 0.05)
 ```
 
 ```{r}
-n = 100
+n_a = 10
+n_b = 20
 N = 100
 P = (0:N)/N
 b_double = NULL
@@ -237,10 +238,10 @@ b_dist = NULL
 
 for(p in P){
   # Calculate power
-  power_double = power_calc_fischer_null_hyp_true(p_val_a, p, n, n + 40, .05)
-  power_point = power_calc_fischer_null_hyp_true(p_val_b, p, n, n + 40, .05)
-  power_tail = power_calc_fischer_null_hyp_true(p_val_c_power, p, n, n +40, .05)
-  power_dist = power_calc_fischer_null_hyp_true(p_val_d, p, n, n +40, .05)
+  power_double = power_calc_fischer_null_hyp_true(p_val_a, p, n_a, n_b, .05)
+  power_point = power_calc_fischer_null_hyp_true(p_val_b, p, n_a, n_b, .05)
+  power_tail = power_calc_fischer_null_hyp_true(p_val_c_power, p, n_a, n_b, .05)
+  power_dist = power_calc_fischer_null_hyp_true(p_val_d, p, n_a, n_b, .05)
     
   # Add power to the list
   b_double = c(b_double, power_double)
@@ -253,17 +254,19 @@ df_power <- data.frame(P, b_double, b_point, b_tail, b_dist)
 ```
 
 ```{r}
-ggplot(data = df_power)+
-  geom_point(aes(x = P, y = b_dist), alpha = 0.8)+
-  geom_point(aes(x = P, y = b_point), color = "red", alpha = 0.6)+
-  geom_point(aes(x = P, y = b_tail), color = "green", alpha = 0.3)+
-  geom_point(aes(x = P, y = b_double), color = "blue", alpha = 0.8)+
-  labs(x = "*P*<sub>1</sub> = *P*<sub>2</sub>", y = "Type 1 Error", title = glue("*n*<sub>1</sub> = {n} / *n*<sub>2</sub> = {n +40}"))+
-  theme(axis.title = element_markdown(), title = element_markdown())
+ggplot(data = df_power) +
+  geom_point(aes(x = P, y = b_dist, color = "Distance"), alpha = 0.8) +
+  geom_point(aes(x = P, y = b_point, color = "Point"), alpha = 0.6) +
+  geom_point(aes(x = P, y = b_tail, color = "Tail"), alpha = 0.3) +
+  geom_point(aes(x = P, y = b_double, color = "Double Tail"), alpha = 0.8) +
+  labs(x = "*\u03B8*<sub>a</sub> = *\u03B8*<sub>b</sub>", y = "Type 1 Error", title = glue("*n*<sub>a</sub> = {n_a} / *n*<sub>b</sub> = {n_b}")) +
+  scale_color_manual(values = c("Distance" = "black", "Point" = "red", "Tail" = "green", "Double Tail" = "blue"), name = "Method")+
+  theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), title = element_markdown(size = 16), legend.title = element_text(size = 14), legend.text = element_text(size = 12))
+
 ```
-# Testing for a cross-section with p_0 = 0.5 and a = 0.05
+# Testing for a cross-section with p_0 = 0.5 and a = 0.85
 ```{r}
-power_calc_fischer_alt <- function(method, p_2, n_1, n_2, a, p_1 = .05){
+power_calc_fischer_alt <- function(method, p_2, n_1, n_2, a, p_1 = .85){
   power = 0
   for(x in 0:n_1){
     for(y in 0:n_2){
@@ -309,41 +312,11 @@ df_power %>%
   pivot_longer(cols = -P, values_to = "Power", names_to = "Method") %>%
   ggplot()+
   geom_line(aes(x = P, y = Power, colour = Method, linetype = Method))+
-  labs(x= "*P*<sub>2</sub>", title = "*P*<sub>1</sub> = 0.05, *n*<sub>1</sub> = 40 / *n*<sub>2</sub> = 50")+
-  theme(axis.title = element_markdown(), title = element_markdown())
+  labs(x= "*\u03B8*<sub>b</sub>", title = "*\u03B8*<sub>a</sub> = 0.85, *n*<sub>a</sub> = 40 / *n*<sub>b</sub> = 50")+
+  theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), title = element_markdown(size = 16), legend.title = element_text(size = 14), legend.text = element_text(size = 12))
   
 ```
 
-```{r}
-my_array <- array(1:12, dim = c(3, 4))
-
-# Convert the array to a data frame
-my_df <- as.data.frame(my_array)
-
-write.table(my_df, file = "my_array_test.csv", sep = ",", row.names = FALSE, col.names = TRUE)
-
-my_df = NULL
-
-my_array = NULL
-
-my_df <- read.table("my_array_test.csv", sep = ",", header = TRUE)
-
-# Convert the data frame back to an array
-my_array <- as.matrix(my_df)
-```
-
-```{r}
-# Define a function
-my_function <- function(x) {
-  return(x * 2)
-}
-
-# Get the name of the function
-function_name <- deparse(substitute(my_function))
-
-# Print the function name
-print(function_name)  # Output: "my_function"
-```
 
 
 ```{r}
@@ -354,7 +327,7 @@ power_surface <- function(method, n_1, n_2, N, a){
     for(j in 0:N){
       p_2 = j/N
       power_ij = power_calc_fischer_alt(method, p_2, n_1, n_2, a, p_1)
-      power_mat[i, j] <- power_ij
+      power_mat[i+1, j+1] <- power_ij
     }
   }
   power_mat
@@ -370,11 +343,10 @@ methods = list(double_tail = p_val_a, point = p_val_b, tail = p_val_c_power, dis
 for(i in 1:4){
   m = methods[[i]]
   power_surf = power_surface(m, n_1, n_2, N, alpha)
-  print(power_surf)
   method_name = names(methods)[i]
   filename = glue("power_surf_{method_name}_model_{n_1}_{n_2}_stepnum_{N}_sign_{alpha}.csv")
   print(filename)
-  write.table(power_surf, file = filename, sep = ",", row.names = FALSE, col.names = TRUE)
+  write.table(power_surf, file = filename, sep = ",", row.names = FALSE, col.names = FALSE)
 }
 
 # power_surf_a <- power_surface(p_val_a, n_1, n_2, N, alpha)
@@ -384,8 +356,24 @@ for(i in 1:4){
 
 ```
 
+
 ```{r}
-write.table(my_df, file = "my_array.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+import_csv <-function(filename, N){
+  mat <- as.matrix(read.csv(filename, header = FALSE))
+  colnames(mat) <- 0:N / N
+  rownames(mat) <- 0:N / N
+  return(mat)
+}
+N = 20
+power_surf_a <- import_csv("power_surf_double_tail_model_40_50_stepnum_20_sign_0.05.csv", N)
+power_surf_b <- import_csv("power_surf_point_model_40_50_stepnum_20_sign_0.05.csv", N)
+power_surf_c <- import_csv("power_surf_tail_model_40_50_stepnum_20_sign_0.05.csv", N)
+power_surf_d <- import_csv("power_surf_distance_model_40_50_stepnum_20_sign_0.05.csv", N)
+
+```
+
+```{r}
+power_surf_a
 
 ```
 
@@ -394,11 +382,13 @@ write.table(my_df, file = "my_array.csv", sep = ",", row.names = FALSE, col.name
 make_heatmap<- function(df){
   melt_df = melt(df)
   colnames(melt_df) <- c("x", "y", "power_diff")
-  plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = power_diff))+
+  plot <- ggplot(melt_df, aes(x = x, y = y, fill = power_diff))+
     geom_tile()+
-    scale_fill_gradient(low = "green", mid = "white", high = "red", limits = c(-.1, .1))+
-    labs(x = "P_0", y = "True p")+
-    theme_classic()
+    scale_fill_gradient2(low = "green", mid = "white", high = "red", limits = c(-.1, .1))+
+    labs(x = "\u03b8<sub>a</sub>", y = "\u03b8<sub>b</sub>", fill = "\u0394 Power")+
+    theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), title = element_markdown(size = 16), legend.title = element_markdown(size = 14), legend.text = element_text(size = 12))+
+    scale_x_continuous(breaks = c(0, 0.5, 1)) +
+    scale_y_continuous(breaks = c(0, 0.5, 1))
   return(plot)
 }
 

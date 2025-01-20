@@ -230,26 +230,26 @@ comparison_p_vals <- function(n, p){
   df
 }
 
-df <- comparison_p_vals(10, 0.5)
+df <- comparison_p_vals(10, 1/6)
 
 df %>%
   pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
-  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  ggplot(aes(x = x_val, y = P, fill = Method), xlab = "Method") +
   geom_bar(stat = "identity", width = .75, position = "dodge") +
   theme_classic() +
   labs(x = "X", y = "p-value")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  theme(axis.text.x = element_text(size = 12, angle = 0, vjust = 0.5), axis.text.y = element_text(size = 12), axis.title = element_text(size = 14), legend.text = element_text(size = 12), legend.title = element_text(size = 14))+
   geom_hline(yintercept = .05)
   #scale_x_discrete(limits = factor(13:28))
   
 
 df %>%
   pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
-  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  ggplot(aes(x = x_val, y = -log(P), fill = Method), xlab = "Method") +
   geom_bar(stat = "identity", width = .75, position = "dodge") +
   theme_classic() +
-  labs(x = "X", y = "- log(p)")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  labs(x = "X", y = "- log(p-value)")+
+  theme(axis.text.x = element_text(size = 12, angle = 0, vjust = 0.5), axis.text.y = element_text(size = 12), axis.title = element_text(size = 14), legend.text = element_text(size = 12), legend.title = element_text(size = 14))+
   #scale_x_discrete(limits = factor(13:28))
   geom_hline(yintercept = -log(5e-2))
 ```

@@ -1,0 +1,10 @@
+
+```{r}
+binom.test(5, 10, p = 0.7, alternative = "two.sided")
+```
+
+```{r}
+poisson.test(x = 5, T = 10, alternative = "two.sided")
+```
+
+

@@ -237,6 +237,22 @@ print("____")
 ```
 
 ```{r}
+p_val_b(9, 10)
+dpois(9, 10)
+dpois(10, 10)
+
+dpois(3, 4)
+dpois(4, 4)
+
+dpois(5, 6)
+dpois(6, 6)
+
+dpois(0, 1)
+dpois(1, 1)
+```
+
+
+```{r}
 p_val_c(3, 3)
 p_val_c(5, 3)
 ```
@@ -268,26 +284,26 @@ comparison_p_vals <- function(mu, n){
   df
 }
 
-df <- comparison_p_vals(12, 20)
+df <- comparison_p_vals(20, 40)
 
 df %>%
   pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
-  ggplot(aes(x = factor(x_val), y = P, fill = Method), xlab = "Method") +
+  ggplot(aes(x = x_val, y = P, fill = Method), xlab = "Method") +
   geom_bar(stat = "identity", width = .75, position = "dodge") +
   theme_classic() +
-  labs(x = "X", y = "p-value")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  labs(x = "X", y = "p-val")+
+  theme(axis.text.x = element_text(size = 12, angle = 0, vjust = 0.5), axis.text.y = element_text(size = 12), axis.title = element_text(size = 14))+
   geom_hline(yintercept = .05)
   #scale_x_discrete(limits = factor(13:28))
   
 
 df %>%
   pivot_longer(-x_val, names_to = "Method", values_to = "P") %>%
-  ggplot(aes(x = factor(x_val), y = -log(P), fill = Method), xlab = "Method") +
+  ggplot(aes(x = x_val, y = -log(P), fill = Method), xlab = "Method") +
   geom_bar(stat = "identity", width = .75, position = "dodge") +
   theme_classic() +
-  labs(x = "X", y = "- log(p)")+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))+
+  labs(x = "X", y = "- log(p-val)")+
+  theme(axis.text.x = element_text(size = 12, angle = 0, vjust = 0.5), axis.text.y = element_text(size = 12), axis.title = element_text(size = 14), legend.text = element_text(size = 12), legend.title = element_text(size = 14))+
   #scale_x_discrete(limits = factor(13:28))
   geom_hline(yintercept = -log(5e-2))
 ```
@@ -333,21 +349,28 @@ compare_power_null_hyp_true <- function(P){
   df_power
 }
 
-N = 30
-P = 10 *(1:N)/N
+N = 400
+P = 20 *(1:N)/N
 
 df_power_null_hyp <- compare_power_null_hyp_true(P)
 ```
 
 ```{r}
-print(df_power_null_hyp)
+colnames(df_power_null_hyp) <- c("P", "​Double tail", "Point", "Tail", "Distance") 
 
-ggplot(data = df_power_null_hyp)+
-  geom_line(aes(x = P, y = b_dist), linetype = "twodash")+
-  geom_line(aes(x = P, y = b_point), color = "red", linetype = "dotdash")+
-  geom_line(aes(x = P, y = b_tail), color = "darkgreen", linetype = "dotted")+
-  geom_line(aes(x = P, y = b_double), color = "blue", linetype = "dashed")+
-  theme_classic()
+df_power_null_hyp %>% 
+  pivot_longer(cols = -P, values_to = "Error", names_to = "Method") %>%
+  ggplot()+
+  geom_line(aes(x = P, y = Error, colour = Method, linetype = Method))+
+  labs(x= "\u3bc", y = "Type 1 Error")+
+  theme(axis.title = element_markdown(size = 12), axis.text = element_text(size = 12), legend.title = element_text(size = 14), legend.text = element_text(size = 12))
+
+df_power_null_hyp %>% 
+  pivot_longer(cols = -P, values_to = "Error", names_to = "Method") %>%
+  ggplot()+
+  geom_point(aes(x = P, y = Error, colour = Method, shape = Method))+
+  labs(x= "\u3bc", y = "Type 1 Error")+
+  theme(axis.title = element_markdown(size = 12), axis.text = element_text(size = 12), legend.title = element_text(size = 14), legend.text = element_text(size = 12))
 ```
 
 ```{r}
@@ -365,7 +388,8 @@ p_val_d(3, 9)
 # alternate hypothesis / getting power function
 
 ```{r}
-p0 = 8.6
+p0 = 19.8
+maxp = 40
 power_calc_poisson_alt <- function(method, p_true, a, p_0 = p0){
   power = 1
   # subtract the probability of being in the acceptance region
@@ -382,7 +406,7 @@ power_calc_poisson_alt <- function(method, p_true, a, p_0 = p0){
 
 N = 100
 alpha = .05
-P = 20*(0:N)/N
+P = maxp*(0:N)/N
 b_double = NULL
 b_point = NULL
 b_tail = NULL
@@ -413,8 +437,8 @@ df_power %>%
   pivot_longer(cols = -P, values_to = "Power", names_to = "Method") %>%
   ggplot()+
   geom_line(aes(x = P, y = Power, colour = Method, linetype = Method))+
-  labs(x= "*P*", title = glue("*P*<sub>0</sub> = {p0}"))+
-  theme(axis.title = element_markdown(), title = element_markdown())
+  labs(x= "\u03bc", title = glue("\u03bc<sub>0</sub> = {p0}"))+
+  theme(axis.title = element_markdown(size = 12), axis.text = element_text(size = 12), legend.title = element_text(size = 14), legend.text = element_text(size = 12), title = element_markdown(size = 14))
   
 ```
 
@@ -423,10 +447,10 @@ df_power %>%
 # Surface / heatmap plots
 ```{r}
 power_surface <- function(method, max_p, N, a){
-  power_mat <- matrix(0, N+1, N+1)
-  for(i in 0:N){
+  power_mat <- matrix(0, N, N)
+  for(i in 1:N){
     p_1 = max_p*i/N
-    for(j in 0:N){
+    for(j in 1:N){
       p_2 = max_p*j/N
       power_ij = power_calc_poisson_alt(method, p_2, a, p_1)
       power_mat[i, j] <- power_ij
@@ -441,16 +465,20 @@ power_surf_c <- power_surface(p_val_c_power, 20, 50, .05)
 power_surf_d <- power_surface(p_val_d, 20, 50, .05)
 ```
 
+```{r}
+power_surf_b
+```
+
 
 ```{r}
 make_heatmap<- function(df){
   melt_df = melt(df)
   colnames(melt_df) <- c("x", "y", "power_diff")
-  plot <- ggplot(melt_df, aes(x = x/sqrt(length(x)), y = y/sqrt(length(y)), fill = power_diff))+
+  plot <- ggplot(melt_df, aes(x = 20*x/sqrt(length(x)), y = 20*y/sqrt(length(y)), fill = power_diff))+
     geom_tile()+
-    scale_fill_gradient2(low = "green", mid = "white", high = "red", limits = c(-.1, .1))+
-    labs(x = "P_0", y = "True p")+
-    theme_classic()
+    scale_fill_gradient2(low = "green", mid = "white", high = "red", limits = c(-1, 1))+
+    labs(x = "\u03bc<sub>0</sub>", y = "True \u03bc", fill = "\u0394 Power")+
+    theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), legend.title = element_markdown(size = 12), legend.text = element_text(size = 10))
   return(plot)
 }
 
@@ -473,7 +501,7 @@ plotList[[14]] = make_heatmap(power_surf_b - power_surf_d)
 plotList[[15]] = make_heatmap(power_surf_c - power_surf_d)
 plotList[[16]] = make_heatmap(power_surf_d - power_surf_d)
 
-plotList[[5]]
+plotList[[10]]
 
 ggmatrix(plotList, 4, 4,
          xAxisLabels = c("Double tail", "Point", "Tail", "Distance"),
