@@ -1,0 +1,118 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(ggplot2)
+```
+
+
+```{r}
+k = .5
+alp = .05
+a = qnorm(k*alp)
+b = qnorm(1-(1-k)*alp)
+
+mu = (0:40)/10 - 2
+
+beta_k1 = 1+ pnorm(a, mean = mu) - pnorm(b, mean = mu)
+
+k = .6
+alp = .05
+a = qnorm(k*alp)
+b = qnorm(1-(1-k)*alp)
+
+beta_k2 = 1+pnorm(a, mean = mu) - pnorm(b, mean = mu)
+
+k = .7
+alp = .05
+a = qnorm(k*alp)
+b = qnorm(1-(1-k)*alp)
+
+beta_k3 = 1+pnorm(a, mean = mu) - pnorm(b, mean = mu)
+
+k = .8
+alp = .05
+a = qnorm(k*alp)
+b = qnorm(1-(1-k)*alp)
+
+beta_k4 = 1+pnorm(a, mean = mu) - pnorm(b, mean = mu)
+
+k = .9
+alp = .05
+a = qnorm(k*alp)
+b = qnorm(1-(1-k)*alp)
+
+beta_k5 = 1+pnorm(a, mean = mu) - pnorm(b, mean = mu)
+
+k = 1
+alp = .05
+a = qnorm(k*alp)
+b = qnorm(1-(1-k)*alp)
+
+beta_k6 = 1+pnorm(a, mean = mu) - pnorm(b, mean = mu)
+
+df = data.frame(mu, beta_k1, beta_k2, beta_k3, beta_k4, beta_k5, beta_k6)
+
+ggplot(data = df, labs = title(main = "Power functions for increasing k" ,xlab = "True mu", ylab = "Type II Error"))+
+  geom_line(aes(mu, beta_k1, fill = "0.5"))+
+  geom_line(aes(mu, beta_k2, fill = "0.6"))+
+  geom_line(aes(mu, beta_k3, fill = "0.7"))+
+  geom_line(aes(mu, beta_k4, fill = "0.8"))+
+  geom_line(aes(mu, beta_k5, fill = "0.9"))+
+  geom_line(aes(mu, beta_k6, fill = "1.0"))+
+  ylab("Power")+
+  xlab("True \u03BC")+
+  theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title = element_text(size = 14))
+  
+```
+```{r}
+# Reshape the data frame to long format
+df_long <- tidyr::pivot_longer(df, cols = starts_with("beta_k"), names_to = "k", values_to = "beta")
+
+# Create the plot
+ggplot(data = df_long, aes(x = mu, y = beta, color = k)) +
+  geom_line() +
+  labs(title = "Power functions for increasing k", x = "True μ", y = "Type II Error") +
+  ylab("Power") +
+  xlab("True μ") +
+  scale_color_manual(
+    values = c("beta_k1" = "red", "beta_k2" = "orange", "beta_k3" = "yellow", "beta_k4" = "green", "beta_k5" = "blue", "beta_k6" = "purple"),
+    labels = c("0.5", "0.6", "0.7", "0.8", "0.9", "1.0"),
+    name = "k values"
+  )
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 14)
+  )
+```
+
+
+
+```{r}
+x = (0:200)/40
+
+plot(x, dnorm(x, 2, sqrt(0.2)))
+plot(x, dgamma(x, shape = 20, scale = 0.1))
+```
+
+```{r}
+# H0: sc = 1, H1: sc neq 1
+sc = 1
+alp = .05
+g = 0.5
+n = (0:100)/100 + 19.9
+a = qgamma(g*alp, shape = 20)
+b = qgamma(1 - (1-g)*alp, shape = 20)
+
+beta_g1 = 1 + pgamma(a, shape = n) - pgamma(b, shape = n)
+plot(n, beta_g1)
+```
+

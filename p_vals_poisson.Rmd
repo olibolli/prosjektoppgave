@@ -388,8 +388,8 @@ p_val_d(3, 9)
 # alternate hypothesis / getting power function
 
 ```{r}
-p0 = 19.8
-maxp = 40
+p0 = 5.2
+maxp = 20
 power_calc_poisson_alt <- function(method, p_true, a, p_0 = p0){
   power = 1
   # subtract the probability of being in the acceptance region
