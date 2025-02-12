@@ -68,7 +68,7 @@ ggplot(data = df, labs = title(main = "Power functions for increasing k" ,xlab =
   geom_line(aes(mu, beta_k6, fill = "1.0"))+
   ylab("Power")+
   xlab("True \u03BC")+
-  theme(axis.title = element_markdown(size = 14), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title = element_text(size = 14))
+  theme(axis.title = element_text(size = 14), axis.text = element_text(size = 12), legend.text = element_text(size = 12), legend.title = element_text(size = 14))
   
 ```
 ```{r}
@@ -104,15 +104,96 @@ plot(x, dgamma(x, shape = 20, scale = 0.1))
 ```
 
 ```{r}
-# H0: sc = 1, H1: sc neq 1
+# H0: n = 20, H1: n neq 20
 sc = 1
 alp = .05
 g = 0.5
-n = (0:100)/100 + 19.9
+n = (0:100)/100 + 19.8
 a = qgamma(g*alp, shape = 20)
 b = qgamma(1 - (1-g)*alp, shape = 20)
 
-beta_g1 = 1 + pgamma(a, shape = n) - pgamma(b, shape = n)
+beta_g1 = 1 + pgamma(a, shape = n, scale = sc) - pgamma(b, shape = n, scale = sc)
 plot(n, beta_g1)
+```
+
+```{r}
+alp = .05
+g = 0.5
+a = qgamma(g*alp, shape = 20)
+b = qgamma(1 - (1-g)*alp, shape = 20)
+
+power_gamma<-function(n, g, n_0){
+  sc = 1
+  alp = .05
+  #g = 0.5
+  a = qgamma(g*alp, shape = n_0)
+  b = qgamma(1 - (1-g)*alp, shape = n_0)
+  beta_g1 = 1 + pgamma(a, shape = n, scale = sc) - pgamma(b, shape = n, scale = sc)
+  beta_g1
+}
+  
+# searching for the parameter value that gives the lowest power
+optimize(power_gamma, g = 0.5, n_0 = 20, lower = 19.8, upper = 20.3, tol = 1e-5)
+
+# find the correct value g that gives an unbiased test
+diff_unbiased<-function(g, n_0){
+  power_ref = 0.05 # is the alpha level of .05
+  vals = optimize(power_gamma, g = g, n_0 = n_0, lower = 2*n_0/3, upper = 4*n_0/3, tol = 1e-5)
+  n_min = vals$minimum
+  power_min = vals$objective
+  power_diff = abs(power_ref - power_min)
+  power_diff
+}
+
+optimize(diff_unbiased, n_0 = 20, lower = 0.3, upper = 0.7, tol = 1e-7)
+```
+```{r}
+g_prop = 0.4562459
+
+a = qgamma(g_prop*alp, shape = 20)
+b = qgamma(1 - (1-g_prop)*alp, shape = 20)
+
+# Checking if density are equal at the critical points 
+dgamma(a, shape = 20)
+dgamma(b, shape = 20)
+```
+The densities are not equal at the critical points which means that we have not used density as test statistic. And it is actually quite far from being the case as well.
+
+```{r}
+# changed the scale parameter to check if it is invariant over this 
+sc = 2
+alp = .05
+g = g_prop
+n = (0:100)/100 + 19.8
+a = qgamma(g*alp, shape = 20, scale = sc)
+b = qgamma(1 - (1-g)*alp, shape = 20, scale = sc)
+
+beta_g1 = 1 + pgamma(a, shape = n, scale = sc) - pgamma(b, shape = n, scale = sc)
+plot(n, beta_g1)
+```
+# Trying to find ideal g as function of n_0
+
+```{r}
+n_0_vec = (1:500)/10
+g_ideal = c()
+
+for(n_0 in n_0_vec){
+  vals = optimize(diff_unbiased, n_0 = n_0, lower = 0.15, upper = 0.7, tol = 1e-7)
+  g_ideal = c(g_ideal,vals$minimum)
+}
+```
+
+```{r}
+plot(n_0_vec, g_ideal)
+plot(n_0_vec, g_ideal, log = "x")
+```
+
+
+
+# Try density as test statistic
+
+```{r}
+# Find a and b such that dgamma(a) = dgamma(b) and size alpha
+?plot
 ```
 
