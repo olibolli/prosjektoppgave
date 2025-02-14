@@ -174,7 +174,7 @@ plot(n, beta_g1)
 # Trying to find ideal g as function of n_0
 
 ```{r}
-n_0_vec = (1:500)/10
+n_0_vec = (1:500)/10 + 10
 g_ideal = c()
 
 for(n_0 in n_0_vec){
@@ -188,6 +188,30 @@ plot(n_0_vec, g_ideal)
 plot(n_0_vec, g_ideal, log = "x")
 ```
 
+```{r}
+density_and_tail_ratio <- function(g, n_0){
+  sc = 1
+  a = qgamma(g*alp, shape = n_0, scale = sc)
+  b = qgamma(1 - (1-g)*alp, shape = n_0, scale = sc)
+  
+  dens_rat = dgamma(a, shape = n_0, scale = sc)/dgamma(b, shape = n_0, scale = sc)
+  tail_rat = g / (1 -g)
+  
+  return(list(dens_rat, tail_rat))
+}
+
+dens_ratio = c()
+tail_ratio = c()
+for(i in 1:length(g_ideal)){
+  rat_vals = density_and_tail_ratio(g_ideal[i], n_0_vec[i])
+  
+  dens_ratio = c(dens_ratio, rat_vals[1])
+  tail_ratio = c(tail_ratio, rat_vals[2])
+}
+
+plot(n_0_vec, dens_ratio, log = "x")
+plot(n_0_vec, tail_ratio, log = "x")
+```
 
 
 # Try density as test statistic
