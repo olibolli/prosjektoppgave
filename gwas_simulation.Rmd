@@ -1,0 +1,199 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(ggplot2)
+library(extraDistr)
+```
+
+```{r}
+# Use a trinomial hypergeometric dsitribution (multinomial dist) to gain what the probbilities are under null -> Calculate the p-values
+## Make the rejection boundaries
+
+# Johnsen only looks at Type 1 error. What is Type 1 error a function of?
+## Total observations n ??
+## Minor Allele frequency 
+## Type 1 error (alpha) = 5 * e-8
+
+# What is power a function of
+## Total observations n ??
+## Minor Allele frequency = 0.1
+## Type 1 error (alpha) = 5 * e-8
+## lambda param
+## beta_0 ??
+
+?dmvhyper
+```
+
+```{r}
+# Defining variables in the model according to n, MAF and alpha
+# Calculating the p-values for each outcome sum y = v (Here we wub for each method)
+# Calculate the type 1 error by summing the probabilities of observing each outcome that leads to rejection
+
+define_gwas_vars <- function(n, maf, alpha){
+  n_0 = n*(1-maf)**2
+  n_2 = n*maf**2
+  n_1 = n*2*(1-maf)*maf
+  
+  alpha_fwer = alpha / n
+  
+  return(list(c(n_0, n_1, n_2), alpha_fwer))
+}
+
+# Define p-value through a test statistic
+observator_p_val <- function(w_statistic, y_vec, n_vec){
+  y_cond = sum(y_vec)
+  
+  y_0 = y_vec[1]
+  y_1 = y_vec[2]
+  y_2 = y_vec[3]
+  
+  n_0 = n_vec[1]
+  n_1 = n_vec[2]
+  n_2 = n_vec[3]
+  
+  wy = w_statistic(y_vec, n_vec)
+  if(is.nan(wy)){
+    p_val = 0
+    return(p_val)
+  }
+  
+  p_val = 0
+  # Iterate through the total outcome space given y_cond
+  ## y_cond = x_0 + x_1 + x_2
+  ## x_i must be between 0 and n_i
+  x_0_max = min(n_0, y_cond)
+  for(x_0 in 0:x_0_max){
+    x_1_min = max(0, y_cond - x_0 - n_2) # X_2 can be max n_2 and x_0 + x_1 + x_2 = y_cond 
+    x_1_max = min(n_1, y_cond - x_0)
+    for(x_1 in x_1_min:x_1_max){
+      x_2 = y_cond - x_0 - x_1
+      x_vec = c(x_0, x_1, x_2)
+      wx = w_statistic(x_vec, n_vec)
+      if(is.nan(wx)){
+        prob_add = dmvhyper(x_vec, n_vec, y_cond)
+        if(is.nan(prob_add)){
+          
+        }
+        else{
+          p_val = p_val + prob_add
+        }
+      }
+      else if (!(wx > wy)){
+        p_val = p_val + dmvhyper(x_vec, n_vec, y_cond)
+      }
+    }
+  }
+  return(p_val)
+}
+
+## Point p-val
+point_prob<- function(x_vec, n_vec){
+  dmvhyper(x_vec, n_vec, sum(x_vec), log = TRUE)
+}
+
+## Tail p-val
+
+
+## Dist p-val
+dist_p_val<- function(y_0, y_1, y_2, theta_0, n_0, n_1, n_2){
+  y_cond = y_0 + y_1 + y_2
+  
+}
+
+power_calc_null_hyp_true <- function(method, y_cond, n_vec, alpha){
+  n_0 = n_vec[1]
+  n_1 = n_vec[2]
+  n_2 = n_vec[3]
+  
+  power = 0
+  # Iterate through the total outcome space given y_cond
+  ## y_cond = x_0 + x_1 + x_2
+  ## x_i must be between 0 and n_i
+  x_0_max = min(n_0, y_cond)
+  for(x_0 in 0:x_0_max){
+    x_1_min = max(0, y_cond - x_0 - n_2) # X_2 can be max n_2 and x_0 + x_1 + x_2 = y_cond 
+    x_1_max = min(n_1, y_cond - x_0)
+    for(x_1 in x_1_min:x_1_max){
+      x_2 = y_cond - x_0 - x_1
+      x_vec = c(x_0, x_1, x_2)
+      wx = observator_p_val(method, x_vec, n_vec)
+      if (!(wx > alpha)){
+        power = power + dmvhyper(x_vec, n_vec, y_cond)
+      }
+    }
+  }
+  return(power)
+}
+
+```
+
+```{r}
+# Testing point_prob function
+point_prob(c(0, 1, 2), c(4, 4, 4))
+
+point_prob(c(5, 1, 2), c(4, 4, 4))
+
+point_prob(c(4, 4, 4), c(4, 4, 4))
+```
+
+```{r}
+# Testing observator_p_val with point_prob
+
+observator_p_val(point_prob, c(0, 1, 2), c(4, 4, 4))
+
+observator_p_val(point_prob, c(5, 1, 2), c(4, 4, 4))
+
+observator_p_val(point_prob, c(4, 4, 4), c(4, 4, 4))
+
+observator_p_val(point_prob, c(0, 1, 0), c(4, 4, 4))
+
+observator_p_val(point_prob, c(1, 0, 0), c(4, 4, 4))
+
+observator_p_val(point_prob, c(0, 2, 0), c(4, 4, 4))
+
+observator_p_val(point_prob, c(2, 0, 0), c(4, 4, 4))
+
+observator_p_val(point_prob, c(3, 0, 0), c(4, 4, 4))
+
+observator_p_val(point_prob, c(4, 0, 0), c(4, 4, 4))
+```
+
+```{r}
+power_calc_null_hyp_true(point_prob, 3, c(4, 4, 4), 5e-2)
+
+power_calc_null_hyp_true(point_prob, 4, c(4, 4, 4), 5e-2)
+
+power_calc_null_hyp_true(point_prob, 20, c(10, 10, 10), 5e-2)
+```
+
+```{r}
+n_tot = 100
+gwas_vars = define_gwas_vars(n = n_tot, maf = 0.1, alpha = 5e-2)
+n_vec = gwas_vars[[1]]
+alpha = gwas_vars[[2]]
+print(n_vec)
+print(alpha)
+
+print(c(81, 18, 1))
+
+y_range = 1:(n_tot/2)
+pwr_vec = c()
+for(y_tot in y_range){
+  print(y_tot)
+  pwr_y = power_calc_null_hyp_true(point_prob, y_tot, n_vec, alpha)
+  #pwr_vec = c(pwr_vec, pwr_y)
+}
+
+#plot(y_range, pwr_vec)
+```
+
+
+
+
