@@ -1,0 +1,109 @@
+---
+title: "gamma_lrt"
+author: "Olai Gaarn Skogen"
+date: "2025-02-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(bigsnpr)
+```
+
+```{r}
+# simulate gamma
+
+# calculate alpha_hat
+shape_gamma_est <- function(x_vec){
+  high_search = max(10* sum(x_vec), 10)
+  vals = c(0, high_search)
+  alpha = optimize(likelihood_der, interval = vals, x_vec = x_vec)$minimum
+  alpha
+}
+
+likelihood_der<-function(alpha, x_vec){
+  n = length(x_vec)
+  score = abs(- n * digamma(alpha) + sum(log(x_vec)))
+  score
+}
+
+# calculate Eta
+simulate_one_eta <- function(n, alpha_sim, alpha_0){
+  # simulate gamma
+  x_vec = rgamma(n, shape = alpha_sim)
+  
+  # find mle estimate for shape param
+  alpha_hat = shape_gamma_est(x_vec)
+  
+  # calculate eta stat
+  eta = (gamma(alpha_hat)/gamma(alpha_0))^n *prod(x_vec^(alpha_0 - alpha_hat))
+  
+  eta
+}
+```
+
+```{r}
+simulate_one_eta(1, alpha_sim = 2, alpha_0 = 1)
+```
+
+```{r}
+find_critical_values<-function(m, n, alpha_0){
+  # Simulate under H_0
+  eta_vec = c()
+  for(j in 1:m){
+    eta_new = simulate_one_eta(n, alpha_0, alpha_0)
+    eta_vec = c(eta_vec, eta_new)
+  }
+  
+  # Find eCDF
+  F_eta = ecdf(eta_vec)
+  F_eta(5e-2)
+}
+
+crit = find_critical_values(100000, 1, 1)
+crit
+```
+
+```{r}
+power_lrt<- function(m, n, alpha_0, alpha, crit){
+  eta_vec = c()
+  for(j in 1:m){
+    eta_new = simulate_one_eta(n, alpha_sim = alpha, alpha_0 = alpha_0)
+    eta_vec = c(eta_vec, eta_new)
+  }
+  
+  power = sum(!(eta_vec > crit)) / length(eta_vec)
+  power
+}
+
+power_lrt(1000, 1, 1, 1e-1, crit)
+```
+
+```{r}
+power_vec_calc<-function(m, n, alpha_0, alpha_vec, crit){
+  power_vec = c()
+  for(a in alpha_vec){
+    pwr_new = power_lrt(m, n, alpha_0, a, crit)
+    power_vec = c(power_vec, pwr_new)
+  }
+  
+  power_vec
+}
+```
+
+```{r}
+alpha_vec = seq_log(5e-1, 2, 30)
+
+pwr_vec = power_vec_calc(10000, 1, 1, alpha_vec, crit)
+
+plot(alpha_vec, pwr_vec, log = 'x')
+```
+
+
+
+
+
+
