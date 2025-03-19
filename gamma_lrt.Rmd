@@ -57,13 +57,15 @@ find_critical_values<-function(m, n, alpha_0){
     eta_new = simulate_one_eta(n, alpha_0, alpha_0)
     eta_vec = c(eta_vec, eta_new)
   }
+  # Find the eta s.t. 0.05 of the simulated values are below it
+  eta_sorted = sort(eta_vec)
+  alpha = 0.05
+  return(eta_sorted[floor(m*alpha)])
   
-  # Find eCDF
-  F_eta = ecdf(eta_vec)
-  F_eta(5e-2)
+  
 }
 
-crit = find_critical_values(100000, 1, 1)
+crit = find_critical_values(1000, 1, 2)
 crit
 ```
 
@@ -79,7 +81,7 @@ power_lrt<- function(m, n, alpha_0, alpha, crit){
   power
 }
 
-power_lrt(1000, 1, 1, 1e-1, crit)
+power_lrt(10000, 1, 2, 2, crit)
 ```
 
 ```{r}
@@ -95,12 +97,91 @@ power_vec_calc<-function(m, n, alpha_0, alpha_vec, crit){
 ```
 
 ```{r}
-alpha_vec = seq_log(5e-1, 2, 30)
+alpha_vec = seq_log(5e-1, 4, 30)
 
-pwr_vec = power_vec_calc(10000, 1, 1, alpha_vec, crit)
+pwr_vec = power_vec_calc(10000, 1, 2, alpha_vec, crit)
 
 plot(alpha_vec, pwr_vec, log = 'x')
 ```
+
+# Checking if I can show unbiased with David Birkes
+
+```{r}
+# Trying to find alpha_2 such that K (alpha_2) = 0
+
+K_tilde <- function(alpha, q){
+  return((alpha-q)*digamma(alpha) -log(gamma(alpha)))
+}
+
+K_optim_val <- function(alpha, q, val){
+  K_diff = abs(K_tilde(alpha, q) - val)
+  return(K_diff)
+}
+
+optim_vars <- optimise(K_tilde, q = 1, lower = 0.5, upper = 2, tol = 1e-8)
+```
+
+```{r}
+optim_vars$minimum
+```
+
+```{r}
+alpha_vec = (1:500)/50
+K_vec = c()
+
+for(alp in alpha_vec){
+  K_new = K_tilde(alp, q = 2)
+  K_vec = c(K_vec, K_new)
+}
+
+plot(alpha_vec, K_vec, type = "l")
+```
+
+Seems like alpha = 1 is a minima for K_tilde
+
+```{r}
+alpha_1 = 1
+q_null = 2
+K_val = K_tilde(alpha_1, q_null)
+
+alpha_2 = optimise(K_optim_val, q = q_null, val = K_val, lower = 2, upper = 10, tol = 1e-8)$minimum
+```
+
+```{r}
+alpha_2
+```
+
+```{r}
+M_tilde <-function(alpha, q){
+  return(exp(q*digamma(alpha) - exp(digamma(alpha)))*(digamma(alpha)-digamma(q))/(alpha-q))
+}
+
+M_tilde(alpha_2, q_null)
+K_tilde(alpha_2, q_null)
+
+M_tilde(alpha_1, q_null)
+K_tilde(alpha_1, q_null)
+```
+
+```{r}
+alpha_vec = log((1:500))
+K_vec = c()
+M_vec = c()
+
+for(alp in alpha_vec){
+  K_new = K_tilde(alp, q = 2)
+  K_vec = c(K_vec, K_new)
+  M_new = M_tilde(alp, q = 2)
+  M_vec = c(M_vec, M_new)
+}
+
+plot(K_vec, M_vec, type = "l")
+```
+
+
+
+
+
 
 
 
