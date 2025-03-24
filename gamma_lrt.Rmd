@@ -10,19 +10,31 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(profvis)
 library(bigsnpr)
 ```
+```{r}
+?uniroot
+```
+
 
 ```{r}
+profvis({
 # simulate gamma
 
 # calculate alpha_hat
 shape_gamma_est <- function(x_vec){
   high_search = max(10* sum(x_vec), 10)
   vals = c(0, high_search)
+  # calculate sum(log(x_vec)) outside likelihood_der
   alpha = optimize(likelihood_der, interval = vals, x_vec = x_vec)$minimum
   alpha
 }
+
+## Try to uniroot on likelihood_der without abs
+## Try optimize directly on likelihood, use objective in likelihood quotient
+
+# Try both on log likelihood
 
 likelihood_der<-function(alpha, x_vec){
   n = length(x_vec)
@@ -43,53 +55,60 @@ simulate_one_eta <- function(n, alpha_sim, alpha_0){
   
   eta
 }
+
+simulate_one_eta(1, alpha_sim = 2, alpha_0 = 1)
+})
 ```
 
-```{r}
-simulate_one_eta(1, alpha_sim = 2, alpha_0 = 1)
-```
 
 ```{r}
 find_critical_values<-function(m, n, alpha_0){
   # Simulate under H_0
-  eta_vec = c()
+  eta_vec = rep(NA, m)
   for(j in 1:m){
-    eta_new = simulate_one_eta(n, alpha_0, alpha_0)
-    eta_vec = c(eta_vec, eta_new)
+    eta_vec[j] = simulate_one_eta(n, alpha_0, alpha_0)
   }
   # Find the eta s.t. 0.05 of the simulated values are below it
   eta_sorted = sort(eta_vec)
   alpha = 0.05
   return(eta_sorted[floor(m*alpha)])
-  
-  
 }
+
+# use eta_vec = rep(NA, m) instead of c()
+# may search for find 0.05 smallest values
 
 crit = find_critical_values(1000, 1, 2)
 crit
 ```
 
 ```{r}
+profvis({
 power_lrt<- function(m, n, alpha_0, alpha, crit){
-  eta_vec = c()
+  eta_val = NA
+  count = 0
   for(j in 1:m){
-    eta_new = simulate_one_eta(n, alpha_sim = alpha, alpha_0 = alpha_0)
-    eta_vec = c(eta_vec, eta_new)
+    eta_val = simulate_one_eta(n, alpha_sim = alpha, alpha_0 = alpha_0)
+    if(eta_val <= crit){
+      count = count + 1
+    }
   }
   
-  power = sum(!(eta_vec > crit)) / length(eta_vec)
+  power = count / length(eta_vec)
   power
 }
 
 power_lrt(10000, 1, 2, 2, crit)
+})
 ```
 
 ```{r}
 power_vec_calc<-function(m, n, alpha_0, alpha_vec, crit){
-  power_vec = c()
-  for(a in alpha_vec){
-    pwr_new = power_lrt(m, n, alpha_0, a, crit)
-    power_vec = c(power_vec, pwr_new)
+  alpha_num = length(alpha_vec)
+  power_vec = rep(NA, alpha_num)
+  for(i in 1:alpha_num){
+    set.seed(243)
+    a = alpha_vec[i]
+    power_vec[i] = power_lrt(m, n, alpha_0, a, crit)
   }
   
   power_vec
@@ -97,12 +116,43 @@ power_vec_calc<-function(m, n, alpha_0, alpha_vec, crit){
 ```
 
 ```{r}
-alpha_vec = seq_log(5e-1, 4, 30)
+alpha_vec = seq_log(1.5, 2.5, 30)
 
-pwr_vec = power_vec_calc(10000, 1, 2, alpha_vec, crit)
+crit_1 = crit
+pwr_vec_1 = power_vec_calc(10000, 1, 2, alpha_vec, crit_1)
 
-plot(alpha_vec, pwr_vec, log = 'x')
+crit_10 = find_critical_values(1000, 10, 2)
+pwr_vec_10 = power_vec_calc(10000, 10, 2, alpha_vec, crit_10)
+
+crit_30 = find_critical_values(1000, 30, 2)
+pwr_vec_30 = power_vec_calc(10000, 30, 2, alpha_vec, crit_30)
+
+plot(alpha_vec, pwr_vec_1, log = 'x')
+
+plot(alpha_vec, pwr_vec_10, log = 'x')
+
+plot(alpha_vec, pwr_vec_30, log = 'x')
 ```
+
+```{r}
+crit_1
+crit_10
+crit_30
+```
+
+
+```{r}
+profvis({
+  alpha_vec_unb = seq_log(1.9, 2.1, 10)
+
+  crit_unb = find_critical_values(10000, 1, 2)
+  # getting exact critical value is not important because the test is UMPU
+  pwr_vec_unb = power_vec_calc(1e6, 1, 2, alpha_vec_unb, crit_unb)
+
+  plot(alpha_vec_unb, pwr_vec_unb, log = 'x')
+})
+```
+
 
 # Checking if I can show unbiased with David Birkes
 
