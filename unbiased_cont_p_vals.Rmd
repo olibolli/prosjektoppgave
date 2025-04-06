@@ -1,0 +1,287 @@
+---
+title: "unbiased_cont_p_vals"
+output: html_document
+---
+
+# Intro
+
+Unsure if the p-value calculated holds for all exponential families or for all distributions with MLR? (MORE SPECIFIC)
+
+Let $\theta$ be a parameter and $X = (X_1, ..., X_n)$ be an observed random vector. For now $n = 1$. We then want to test 
+$$
+H_0 : \theta = \theta_0 \\
+H_1 : \theta \neq \theta_0
+$$
+
+Assuming the distribution of X belongs to an exponential family defined as follows : 
+$$
+p_{\theta}(x) = C(\theta)e^{\theta T(x)} h(x)
+$$
+
+We then restrict our attention to the sufficient statistic $T(X)$. And we have the following unbiased UMP test given by (from Lehmann)
+
+$$
+\phi(x) =
+\begin{cases} 
+1 & \text{if } T(x) < C_1 \text{ or } T(x) > C_2 \\
+\gamma_i & \text{if } T(x) = C_i , i = 1, 2 \\
+0 & \text{if } C_1 < T(X) < C_2
+\end{cases}
+$$
+
+where the constants $C_1, C_2$ is determined by the equations
+
+$$
+E_{\theta_0}[\phi(T(X))] = \alpha \\
+E_{\theta_0}[T(X) \phi(T(X))] = E_{\theta_0}[T(X)]  \alpha
+$$
+
+So we see that we are only concerned with the sufficient statistic, which makes sense. Also, if we further restrict ourselves to the continous distributions we can avoid the random rejection region.
+
+We are interested in calculating p-values. It makes most sense to me to use the following definition for p-value.
+
+$$
+\hat{p} = \hat{p}(X) = \inf\{\alpha : X \in S_{\alpha}\}
+$$
+Here $S_{\alpha}$ is a rejection region for the significance level $\alpha$. This means that for the above test $S_{\alpha} = \{X : T(X) < C_1 \text{ or } T(X) > C_2 \}$. It is required that this region is nested something which obviously holds in this situation. IS IT OBVIOUS, HOW DO YOU KNOW THAT THE CRITICAL VALUES ALWAYS MOVES IN? Furthermore when we use our continous condition we have that the observed value $t = T(x)$ must lie on the boundary of the smallest rejection region that give rejection. P-value is the smallest $\alpha$ such that $t = C_1(\alpha)$ or $t = C_2(\alpha)$.
+
+WIP : Asumming they are nested. Justification for this.
+
+WIP : Figuring out which of these two cases we are in. 
+
+### Assuming that $t = C_1(\alpha)$
+
+We can find a $t_{dual}$ such that $t_{dual}=C_2(\alpha)$ when $t=C_1(\alpha)$. We use the following equations
+CONFUSING USE OF ALPHA BECUASE IT IS PARAM IN GAMMA.
+$$
+1-E_{\theta_0}[\phi(T(X))] = \int_{t}^{t_{dual}} f_T(t)dt = 1- \alpha \\
+E_{\theta_0}[T(X) \phi(T(X))] = \int_{-\infty}^{t_{}}t f_T(t)dt + \int_{t_{dual}}^{\infty}t f_T(t)dt = \\
+\int_{-\infty}^{\infty}t f_T(t)dt - \int_{t}^{t_{dual}}t f_T(t)dt = E_{\theta_0}[T(X)] - \int_{t}^{t_{dual}}t f_T(t)dt = E_{\theta_0}[T(X)]  \alpha
+$$
+
+This means that we can solve the equation set
+$$
+\int_{t}^{t_{dual}} f_T(t)dt = 1- \alpha \\
+\int_{t}^{t_{dual}}t f_T(t)dt = (1-\alpha) E_{\theta_0}[T(X)]
+$$
+
+which can be simplified to 
+$$
+\int_{t}^{t_{dual}}t f_T(t)dt = \int_{t}^{t_{dual}} f_T(t)dt \  E_{\theta_0}[T(X)]
+$$
+E_T_short - (pT(t_prop) - pT(t_obs)) * E_T
+
+Then we can solve for $t_{dual}$ and calculate the p-value which becomes the level $\alpha$ of the rejection region.
+
+$$
+\hat{p}(t) = \alpha = 1 - \int_{t}^{t_{dual}} f_T(t)dt
+$$
+
+WIP : Assumption:  the only value which has no dual is t = E[T] ?
+
+WIP : Check computation speed of function
+
+```{r}
+
+unbiased_p_val <- function(t_obs, pT, dT, intT, E_T = NA){
+  # t_obs : Observed value of statistic T
+  # pT : CDF of T
+  # dT : PDF of T
+  # intT : t * f_T(t), needed to calulcate some integrals
+  # E_T : Expected value of T
+  
+  if(is.na(E_T)){
+    # Calculate E_T
+    E_T = integrate(f = intT, lower = -Inf, upper = Inf)$value
+  }
+  
+  # Finding the 0 of the dual equation
+  t_dual = uniroot(dual_equation_high, t_obs = t_obs, pT = pT, dT = dT, intT, E_T = E_T,  interval = c(t_obs+1e-4,100))$root # OBS : E_T - 1e-4 as lower value might not be smart
+  p_val = 1 + pT(t_obs) - pT(t_dual)
+  return(p_val)
+}
+
+# TODO : cut dT from the parameter list
+unbiased_p_val_wip <- function(t_obs, pT, dT, intT, E_T = NA){
+  # t_obs : Observed value of statistic T
+  # pT : CDF of T
+  # dT : PDF of T
+  # intT : t * f_T(t), needed to calulcate some integrals
+  # E_T : Expected value of T
+  
+  if(is.na(E_T)){
+    # Calculate E_T
+    E_T = integrate(f = intT, lower = -Inf, upper = Inf)$value
+  }
+  
+  # Ensuring that t_obs is single-valued
+  if(length(t_obs) > 1){
+    return(sapply(t_obs, find_t_dual_and_calc_tail_prob, pT = pT, dT = dT, intT = intT, E_T = E_T))
+  }
+  else{
+    return(find_t_dual_and_calc_tail_prob(t_obs, pT, dt, intT, E_T))
+  }
+}
+
+find_t_dual_and_calc_tail_prob <- function(t_obs, pT, dT, intT, E_T){
+  # Checking if t_obs is left or right critical value
+  if(t_obs < E_T){
+    # Finding the 0 of the dual equation, t_dual
+    t_dual = tryCatch({uniroot(dual_equation_high, t_obs = t_obs, pT = pT, dT = dT, intT = intT, E_T = E_T,  interval = c(E_T+1e-4,100))$root
+    }, error = function(e){
+      return(E_T) # TODO : Why this value
+    }) 
+    # calculating tails
+    p_val = 1 + pT(t_obs) - pT(t_dual)
+    return(p_val)
+  }
+  else{
+    # Finding the 0 of the dual equation, t_dual
+    t_dual = tryCatch({uniroot(dual_equation_low, t_obs = t_obs, pT = pT, dT = dT, intT, E_T = E_T,  interval = c(-100,E_T-1e-4))$root
+    }, error = function(e){
+      return(E_T) # TODO : Why this value
+    }) 
+    # Calculating tails
+    p_val = 1 + pT(t_dual) - pT(t_obs)
+    return(p_val)
+  }
+}
+
+dual_equation_high <- function(t_prop, t_obs, pT, dT, intT, E_T){
+  # Calculate integral(t * f_T) from t_obs to t_prop
+  E_T_short = integrate(f = intT, lower = t_obs, upper = t_prop)$value
+  E_T_short - (pT(t_prop) - pT(t_obs)) * E_T # TODO: Can save pT(t_obs) from one iteration to the next
+}
+
+dual_equation_low<- function(t_prop, t_obs, pT, dT, intT, E_T){
+  # Calculate integral(t * f_T) from t_prop to t_obs
+  E_T_short = integrate(f = intT, lower = t_prop, upper = t_obs)$value
+  E_T_short - (pT(t_obs) - pT(t_prop)) * E_T # TODO: Can save pT(t_obs) from one iteration to the next
+}
+```
+
+```{r}
+?sapply
+```
+
+
+## Gamma distribution
+
+Need to use T = log(X), where X is Gamma distributed with unknown alpha and beta = 1.
+$$ 
+H_0 : \alpha = \alpha_0 \\
+H_1 : \alpha \neq \alpha_0 \\
+
+\alpha_0 = 2
+$$
+
+```{r}
+library(VGAM)
+```
+
+```{r}
+?dlgamma
+```
+
+
+
+```{r}
+t_obs = 0.1
+alpha_0 = 2
+beta = 1
+
+pT <- function(t, shape = 2, scale = 1){
+  plgamma(t, shape = shape, scale = scale)}
+dT <- function(t, shape = 2, scale = 1){
+  dlgamma(t, shape = shape, scale = scale)}
+intT <- function(t, shape = 2, scale = 1){
+  t*dlgamma(t, shape = shape, scale = scale)}
+
+
+unbiased_p_val_wip(t_obs, pT, dT, intT)
+```
+
+```{r}
+integral_object = integrate(f = intT, lower = -Inf, upper = Inf)
+integral_object
+```
+
+```{r}
+start = 1.8
+end = 2.2
+n = 21
+
+alpha_values <- seq(start, end, length.out = n)
+print(alpha_values)
+```
+
+```{r}
+significance_value = .05
+
+dPower_Gamma <- function(t, alpha_true, significance_value, pT, dT, intT, E_T){
+  
+  (significance_value >= unbiased_p_val_wip(t, pT, dT, intT, E_T)) * dlgamma(t, location = alpha_true, scale = 1)
+  
+}
+
+power = integrate(f = dPower_Gamma, lower = -10, upper = 10, alpha_values[1], significance_value, pT, dT, intT, integral_object$value)
+
+power
+```
+
+
+```{r}
+power_vals = rep(NA, n)
+
+for(i in 1:n){
+  power_vals[i] = integrate(f = dPower_Gamma, lower = -100, upper = 100, alpha_values[i], significance_value, pT, dT, intT, integral_object$value)$value
+}
+```
+
+```{r}
+power_vals
+```
+
+```{r}
+# New way to calculate power
+
+# 1. Find the critical values of t such that the p-values are below the significance level
+find_crit_values <- function(significance_value, pT, dT, intT, E_T, modified_func){
+  
+  modified_func <- function(t){unbiased_p_val_wip(t, pT, dT, intT, E_T) - significance_value}
+  t_1 <- uniroot(modified_func, interval = c(-10, E_T))$root
+  interval_2 = c(E_T - 1e-2, 10)
+  t_2 <- uniroot(dual_equation_high, interval = interval_2, t_obs = t_1, pT = pT, dT = dT, intT = intT, E_T = E_T)$root
+  c(t_1, t_2)
+}
+
+crit <- find_crit_values(significance_value, pT, dT, intT, E_T = integral_object$value, modified_func)
+
+# 2. Calculate the CDF of pT being above or below certain points with alpha_true
+power_from_crit_values_gamma <- function(t1, t2, alpha_true){
+  1 - plgamma(t2, shape = alpha_true) + plgamma(t1, shape = alpha_true)
+}
+
+# 3. Profit
+pwr_vals <- sapply(alpha_values, power_from_crit_values_gamma, t1 = crit[1], t2 = crit[2])
+
+plot(alpha_values, pwr_vals)
+
+
+```
+
+
+
+
+
+# Normal distribution with same mean and variance parameter
+
+A sufficient statistic T = sum(X_i^2). This has something that is non-centrally chi-sq distributed ?
+
+```{r}
+
+```
+
+
+
+

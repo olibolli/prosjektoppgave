@@ -1,0 +1,119 @@
+---
+title: "gamma_lrt_nonsim"
+author: "Olai Gaarn Skogen"
+date: "2025-04-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(VGAM)
+library(distr)
+```
+
+```{r}
+?uniroot
+```
+
+
+We first take the case where n = 1, because then we have the distribution function for $\operatorname{log}(X)$ if $X \sim \text{Gamma}(\alpha, \beta)$.
+
+We can go from 
+1. $T(X) = \operatorname{log}(X)$ sufficient statistic to
+2. $l(X; \alpha) = \alpha \sum_i{T(X_i)} - n \operatorname{log}(\alpha)$ likelihood to
+3. $\hat{\alpha} = \frac{n}{\sum_i{T(X_i)}}$ mle to
+4. $\Lambda(X) = \exp\{l(X; \hat{\alpha}) - l(X; \alpha_0) \}$ likelihood ratio
+
+If we can find the critical value numerically, then we can also find the power numerically.
+
+Pretty sure we did something similar in StatInf.
+
+# Everything is for the Gamma function - test for shape parameter
+
+```{r}
+# find critical values for c
+log_likelihood <- function(t, alpha){
+  alpha * sum(t) - length(t) * digamma(alpha)
+}
+
+likelihood_ratio_calc <- function(t, alpha_0){
+  alpha_hat = igamma(mean(t))
+  log_lr =  log_likelihood(t, alpha_hat) - log_likelihood(t, alpha_0)
+  log_lr
+}
+
+## finding t_dual, i.e. the value of t that gives the same LR value
+find_t_dual <- function(t, alpha_0){
+  # Assuming t_dual is higher than t
+  # TODO : finding a way to make it go both ways
+  lr <- likelihood_ratio_calc(t, alpha_0)
+  
+  modified_func <- function(t) {likelihood_ratio_calc(t, alpha_0) - lr}
+  
+  t_dual <- uniroot(modified_func, lower = t + 1e-4, upper = 10, extendInt = "no")$root
+  t_dual
+}
+
+t = log(1)
+log_likelihood(t, 2)
+likelihood_ratio_calc(t, 2)
+
+likelihood_ratio_calc(log(3), 2)
+
+find_t_dual(t, 2)
+
+## actually finding the critical value c
+
+find_extremity_prob <- function(t, alpha_0){
+  t_dual <- find_t_dual(t, alpha_0)
+  1 - plgamma(t_dual, shape = alpha_0) + plgamma(t, shape = alpha_0)
+}
+
+find_extremity_prob(t, 2)
+
+find_critcal_vals <- function(significance_level, alpha_0){
+  modified_func <- function(t) {find_extremity_prob(t, alpha_0) - significance_level}
+  
+  t1 <- uniroot(modified_func, lower = -10, upper = log(1))$root
+  t2 <- find_t_dual(t1, alpha_0)
+  
+  c1 = likelihood_ratio_calc(t1, alpha_0)
+  c2 = likelihood_ratio_calc(t2, alpha_0)
+  
+  c(t1, t2, c1, c2)
+}
+
+crit_vals = find_critcal_vals(0.05, 2)
+crit_vals
+# find critical values t1 and t2
+
+
+# find power
+find_power <- function(alpha_true, t1, t2){
+  1 - plgamma(t2, shape = alpha_true) + plgamma(t1, shape = alpha_true)
+}
+
+```
+
+```{r}
+start = 1.8
+end = 2.2
+n = 21
+
+alpha_values <- seq(start, end, length.out = n)
+
+pwr_values <- sapply(alpha_values, find_power, t1 = crit_vals[1], t2 = crit_vals[2])
+
+plot(alpha_values, pwr_values)
+```
+
+```{r}
+
+```
+
+
+
+
