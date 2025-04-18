@@ -96,7 +96,7 @@ unbiased_p_val <- function(t_obs, pT, dT, intT, E_T = NA){
   }
   
   # Finding the 0 of the dual equation
-  t_dual = uniroot(dual_equation_high, t_obs = t_obs, pT = pT, dT = dT, intT, E_T = E_T,  interval = c(t_obs+1e-4,100))$root # OBS : E_T - 1e-4 as lower value might not be smart
+  t_dual = uniroot(dual_equation_high, t_obs = t_obs, pT = pT, dT = dT, intT, E_T = E_T, interval = c(t_obs+1e-4,100))$root # OBS : E_T - 1e-4 as lower value might not be smart
   p_val = 1 + pT(t_obs) - pT(t_dual)
   return(p_val)
 }
@@ -127,21 +127,23 @@ find_t_dual_and_calc_tail_prob <- function(t_obs, pT, dT, intT, E_T){
   # Checking if t_obs is left or right critical value
   if(t_obs < E_T){
     # Finding the 0 of the dual equation, t_dual
-    t_dual = tryCatch({uniroot(dual_equation_high, t_obs = t_obs, pT = pT, dT = dT, intT = intT, E_T = E_T,  interval = c(E_T+1e-4,100))$root
+    t_dual = tryCatch({uniroot(dual_equation_high, t_obs = t_obs, pT = pT, dT = dT, intT = intT, E_T = E_T,  lower = E_T, upper = E_T + 1e-4, extendInt = "upX")$root
     }, error = function(e){
-      return(E_T) # TODO : Why this value
+      return(10) # TODO : Why this value
     }) 
     # calculating tails
+    print(t_dual)
     p_val = 1 + pT(t_obs) - pT(t_dual)
     return(p_val)
   }
   else{
     # Finding the 0 of the dual equation, t_dual
-    t_dual = tryCatch({uniroot(dual_equation_low, t_obs = t_obs, pT = pT, dT = dT, intT, E_T = E_T,  interval = c(-100,E_T-1e-4))$root
+    t_dual = tryCatch({uniroot(dual_equation_low, t_obs = t_obs, pT = pT, dT = dT, intT = intT, E_T = E_T,  lower = E_T - 1e-4, upper = E_T, extendInt = "upX")$root
     }, error = function(e){
-      return(E_T) # TODO : Why this value
+      return(-10) # TODO : Why this value
     }) 
     # Calculating tails
+    print(t_dual)
     p_val = 1 + pT(t_dual) - pT(t_obs)
     return(p_val)
   }
@@ -161,7 +163,10 @@ dual_equation_low<- function(t_prop, t_obs, pT, dT, intT, E_T){
 ```
 
 ```{r}
-?sapply
+
+t_obs = 5
+E_T = integral_object$value
+uniroot(dual_equation_low, t_obs = t_obs, pT = pT, dT = dT, intT = intT, E_T = E_T,  lower = E_T - 1e-2, upper = E_T, extendInt = "upX")
 ```
 
 
@@ -186,7 +191,7 @@ library(VGAM)
 
 
 ```{r}
-t_obs = 0.1
+t_obs = 0
 alpha_0 = 2
 beta = 1
 
@@ -220,7 +225,7 @@ significance_value = .05
 
 dPower_Gamma <- function(t, alpha_true, significance_value, pT, dT, intT, E_T){
   
-  (significance_value >= unbiased_p_val_wip(t, pT, dT, intT, E_T)) * dlgamma(t, location = alpha_true, scale = 1)
+  (significance_value >= unbiased_p_val_wip(t, pT, dT, intT, E_T)) * plgamma(t, location = alpha_true, scale = 1)
   
 }
 
@@ -266,8 +271,6 @@ power_from_crit_values_gamma <- function(t1, t2, alpha_true){
 pwr_vals <- sapply(alpha_values, power_from_crit_values_gamma, t1 = crit[1], t2 = crit[2])
 
 plot(alpha_values, pwr_vals)
-
-
 ```
 
 
