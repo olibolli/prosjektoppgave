@@ -1,0 +1,238 @@
+---
+title: "unbiased_disc_p_vals"
+output: html_document
+---
+## Copied from the work on continuous p-values
+```{r}
+
+unbiased_p_val <- function(t_obs, pT, intT, E_T = NA, bndry_min = -Inf, bndry_max = Inf){
+  # t_obs : Observed value of statistic T
+  # pT : CDF of T
+  # intT : t * f_T(t), needed to calulcate some expected values
+  # E_T : Expected value of T
+  
+  if(is.na(E_T)){
+    # Calculate E_T
+    E_T = sum(sapply(seq(bndry_min, bndry_max), intT))
+  }
+  
+  # Assuming that t_obs is single-valued
+  
+  return(find_t_dual_and_calc_tail_prob(t_obs, pT = pT, intT = intT, E_T = E_T, bndry_min = bndry_min, bndry_max = bndry_max))
+  
+}
+
+find_t_dual_and_calc_tail_prob <- function(t_obs, pT, intT, E_T, bndry_min, bndry_max){
+  # Checking if t_obs is left or right critical value
+  if(t_obs < E_T){
+    # Finding the 0 of the dual equation, t_dual
+    # TODO : readable if we are at a upcrossing or downcrossing
+    print(E_T)
+    t_dual = bisection_discrete(dual_equation_high, lower = ceiling(E_T), upper = bndry_max, t_obs = t_obs, pT = pT, intT = intT, E_T = E_T, bndry_min = bndry_min, bndry_max = bndry_max)
+    
+    # calculating tails
+    print(t_dual)
+    # 1 - pT(t_dual -1) = P(T >= t_dual)
+    p_val = 1 - pT(t_dual - 1) + pT(t_obs)
+    return(p_val)
+  }
+  else{
+    # Finding the 0 of the dual equation, t_dual
+    t_dual = bisection_discrete(dual_equation_low, lower = bndry_min, upper = floor(E_T), t_obs = t_obs, pT = pT, intT = intT, E_T = E_T, bndry_min = bndry_min, bndry_max = bndry_max)
+    
+    # Calculating tails
+    print(t_dual)
+    # 1 - pT(t_dual -1) = P(T >= t_dual)
+    p_val = 1  - pT(t_obs - 1) + pT(t_dual)
+    return(p_val)
+  }
+}
+
+bisection_discrete  <- function(f, lower, upper, ...){
+  endCond = FALSE
+  
+  lower = round(lower)
+  upper = round(upper)
+  print(c(lower, upper))
+  fl = f(lower, ...)
+  fu = f(upper, ...)
+  
+  if(fl * fu > 0){
+    # want to check if we want to add the whole tail
+    fl_minus = f(lower -1, ...)
+    if(fl_minus * fl < 0){
+      print(c(fl_minus, fl))
+      if(fl < 0){
+        return(lower)
+      }
+      else{
+        return(lower-1)
+      }
+      
+    }
+    print(c(fl_minus, fl))
+    print("I tried")
+    fu_plus = f(upper+1, ...)
+    print(c(fu, fu_plus))
+    if(fu * fu_plus < 0){
+      if(fu < 0){
+        return(upper)
+      }
+      else{
+        return(upper+1)
+      }
+    }
+    stop("Error : The endpoints are not of opposite sign")
+  }
+  while(!endCond){
+    mid = round((lower + upper)/ 2)
+    fm = f(mid, ...)
+    if(fm * fl > 0){
+      lower = mid
+      fl = fm
+    }
+    else{
+      upper = mid
+      fu = fm
+    }
+    print(c(lower, mid, upper))
+    if(upper - lower == 1){
+      endCond = TRUE
+    }
+  }
+  print(c(fl, fu))
+  if(fl < 0){
+    return(lower)
+  }
+  else{
+    return(upper)
+  }
+  # add [1] if low value is wanted and [2] if high value is wanted
+}
+
+dual_equation_high <- function(t_prop, t_obs, pT, intT, E_T, bndry_min = -Inf, bndry_max = Inf){
+  # Calculate integral(t * f_T) from t_obs to t_prop
+  E_T_short = sum(sapply(c(seq(bndry_min, t_obs), seq(t_prop, bndry_max)), intT))
+  # 1 - pT(x -1) + pT(y) = P(T >= x) + P(T <= y)
+  E_T_short - (1- pT(t_prop - 1) + pT(t_obs)) * E_T # TODO: Can save pT(t_obs) from one iteration to the next
+}
+
+dual_equation_low<- function(t_prop, t_obs, pT, intT, E_T, bndry_min = -Inf, bndry_max = Inf){
+  # Calculate integral(t * f_T) from t_prop to t_obs
+  E_T_short = sum(sapply(c(seq(bndry_min, t_prop), seq(t_obs, bndry_max)), intT))
+  # 1 - pT(x -1) + pT(y) = P(T >= x) + P(T <= y)
+  E_T_short - (1 - pT(t_obs - 1) + pT(t_prop)) * E_T # TODO: Can save pT(t_obs) from one iteration to the next
+}
+```
+
+```{r}
+#Defining the binom distribution because it is suff for Bernoulli trials
+n = 10
+p0 = 1/3
+
+pT <- function(x){pbinom(x, n, p0)}
+dT <- function(x){dbinom(x, n, p0)}
+intT <- function(x){x*dbinom(x, n, p0)}
+```
+
+```{r}
+# Test of the summation method
+E_T = sum(sapply(seq(0, n), intT))
+t_prop = 4
+E_T
+E_T_short = sum(sapply(c(seq(0, 1), seq(t_prop, n)), intT))
+E_T_short
+E_T_short - (pT(t_prop) - pT(1)) * E_T
+```
+
+```{r}
+dual_equation_high(8, 0, pT, intT, E_T = E_T, bndry_min = 0, bndry_max = n)
+
+# need to input bndry values that are 1 out of range because if not one can never get the one-sided case
+
+unbiased_p_val(10, pT, intT, E_T, bndry_min = -1, bndry_max = n+1)
+
+```
+# Calculating power (Copied from cont case)
+```{r}
+
+# 1. Find the critical values of t such that the p-values are below the significance level
+find_crit_values <- function(method, significance_value,  ..., mid_point){
+  
+  modified_func <- function(t, ...){method(t, ...) - significance_value}
+  # TODO : Update so we get automatic guess for mid-point
+  t_1 <- bisection_discrete(modified_func, lower = -1, upper = floor(mid_point), ...)   
+  t_2 <- bisection_discrete(modified_func, lower = ceiling(mid_point), upper = n+1, ...)
+  return(c(t_1, t_2))
+}
+
+# It is important that they are passed as objects and not written directly as bndry_min = bndry_min in the function
+bndry_min = -1
+bndry_max = n+1
+crit_binom_unb <- find_crit_values(unbiased_p_val, significance_value = 0.05, pT = pT, intT = intT, E_T = E_T, bndry_min = bndry_min, bndry_max = bndry_max, mid_point = E_T)
+
+```
+
+
+
+```{r}
+true_pvals = c(seq(0.3, 0.4, by = 0.002), 1/3)
+
+pwr_calc_binom_unbiased <- function(true_p_val){
+  pbinom(crit_binom_unb[1], n, print(true_p_val)) + 1 - pbinom(crit_binom_unb[2] -1, n, true_p_val)
+}
+
+pwr_vals = sapply(true_pvals, pwr_calc_binom_uniased)
+
+
+plot(true_pvals, pwr_vals)
+
+```
+
+```{r}
+source("p_vals_disc.R")
+```
+
+```{r}
+tail_p_val(5, dT, pT, bndry_min = bndry_min, bndry_max = bndry_max)
+```
+
+
+```{r}
+bndry_min = -1
+bndry_max = n+1
+crit_binom_tail <- find_crit_values(tail_p_val, significance_value = 0.05, dT = dT, pT = pT, bndry_min = bndry_min, bndry_max = bndry_max, mid_point = E_T)
+```
+
+```{r}
+bndry_min = 0
+bndry_max = n
+crit_binom_point <- find_crit_values(point_p_val, significance_value = 0.05, dT = dT, bndry_min = bndry_min, bndry_max = bndry_max, mid_point = E_T)
+crit_binom_point
+```
+
+```{r}
+pwr_calc_binom_tail <- function(true_p_val){
+  pbinom(crit_binom_tail[1], n, true_p_val) + 1 - pbinom(crit_binom_tail[2] -1, n, true_p_val)
+}
+
+pwr_vals_tail = sapply(true_pvals, pwr_calc_binom_tail)
+
+plot(true_pvals, pwr_vals_tail)
+```
+
+```{r}
+pwr_calc_binom_point <- function(true_p_val){
+  pbinom(crit_binom_point[1], n, true_p_val) + 1 - pbinom(crit_binom_point[2] -1, n, true_p_val)
+}
+
+pwr_vals_point = sapply(true_pvals, pwr_calc_binom_point)
+
+plot(true_pvals, pwr_vals_point)
+```
+
+
+
+
+
+
