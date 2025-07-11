@@ -1,0 +1,36 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+
+pwr <- function(mu, crit){
+  n = 100
+  mu_0 = 0
+  mu_adj = sqrt(n)*(mu - mu_0)
+  beta = pnorm(crit[1], mean = mu_adj, sd = 1) + (1 - pnorm(crit[2], mean = mu_adj, sd = 1))
+  beta
+}
+
+pnorm(-Inf)
+N = 1000
+mu_vec = ((-N):N) / N
+crit = c(qnorm(0.025), qnorm(1-0.025))
+crit[2]
+
+pwr_vec = sapply(mu_vec, pwr, crit)
+df = data.frame(mu_vec, pwr_vec)
+
+
+ggplot(df)+
+  geom_line(aes(x = mu_vec, y = pwr_vec))+
+  xlab("Alternative mu")+
+  ylab("Power")+
+  labs(title = "Power for Z-test")+
+  theme(main= element_text(size = 14),
+        axis.title = element_text(size = 14))
+  
+```
+

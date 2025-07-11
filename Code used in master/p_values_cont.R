@@ -43,13 +43,13 @@ find_t_dual_and_calc_tail_prob <- function(t_obs, pT, intT, E_T){
   }
 }
 
-dual_equation_high <- function(t_prop, t_obs, pT, dT, intT, E_T){
+dual_equation_high <- function(t_prop, t_obs, pT, intT, E_T){
   # Calculate integral(t * f_T) from t_obs to t_prop
   E_T_short = integrate(f = intT, lower = t_obs, upper = t_prop)$value
   E_T_short - (pT(t_prop) - pT(t_obs)) * E_T # TODO: Can save pT(t_obs) from one iteration to the next
 }
 
-dual_equation_low<- function(t_prop, t_obs, pT, dT, intT, E_T){
+dual_equation_low<- function(t_prop, t_obs, pT, intT, E_T){
   # Calculate integral(t * f_T) from t_prop to t_obs
   E_T_short = integrate(f = intT, lower = t_prop, upper = t_obs)$value
   E_T_short - (pT(t_obs) - pT(t_prop)) * E_T # TODO: Can save pT(t_obs) from one iteration to the next
@@ -106,7 +106,3 @@ find_crit_values <- function(method, significance_value,  ..., mid_point){
   return(c(t_1, t_2))
 }
 
-# 2. Calculate the CDF of pT being above or below certain points with alpha_true
-power_from_crit_values_gamma <- function(t1, t2, alpha_true){
-  return(1 - plgamma(t2, shape = alpha_true) + plgamma(t1, shape = alpha_true))
-}

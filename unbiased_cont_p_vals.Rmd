@@ -25,7 +25,7 @@ $$
 \begin{cases} 
 1 & \text{if } T(x) < C_1 \text{ or } T(x) > C_2 \\
 \gamma_i & \text{if } T(x) = C_i , i = 1, 2 \\
-0 & \text{if } C_1 < T(X) < C_2
+0 & \text{if } C_1 < T(x) < C_2
 \end{cases}
 $$
 
@@ -61,7 +61,7 @@ $$
 
 This means that we can solve the equation set
 $$
-\int_{t}^{t_{dual}} f_T(t)dt = 1- \alpha \\
+\int_{t'}^{t_{dual}} f_T(t)dt = 1- \alpha \\
 \int_{t}^{t_{dual}}t f_T(t)dt = (1-\alpha) E_{\theta_0}[T(X)]
 $$
 
@@ -78,6 +78,28 @@ $$
 $$
 
 WIP : Assumption:  the only value which has no dual is t = E[T] ?
+## E[T] as the midpoint
+
+We can see that $t = E_{\theta_0} [T]$ is the midpoint, i.e. the only value which is its own dual as
+$$
+\int_{t'}^{t_{dual}}t f_T(t)dt = \int_{t'}^{t_{dual}} f_T(t)dt \  E_{\theta_0} [T] \\
+\int_{t'}^{t_{dual}}t f_T(t)dt - \int_{t'}^{t_{dual}}  E_{\theta_0} [T] f_T(t)dt \ = 0 \\
+\int_{t'}^{t_{dual}}(t -  E_{\theta_0} [T])f_T(t)dt = 0 \\
+$$
+
+Since we have assumed that $f_T(t)$ is a density we have $f_T(t) \geq 0$. Furthermore, since $E_{\theta_0}[T]$ is the expected value of T we must have values that are both above and below this point with $f_T(t) > 0$. 
+
+Thus, the only way $t'$ has no other dual is if it can only include one side. This happens when $t = E_{\theta_0}[T]$.
+
+Completely, equivalent argumentation takes place if we start at 
+$$
+\int_{t_{dual}}^{t'}t f_T(t)dt = \int_{t_{dual}}^{t'} f_T(t)dt \  E_{\theta_0} [T]
+$$
+
+```{r}
+?uniroot
+```
+
 
 WIP : Check computation speed of function
 

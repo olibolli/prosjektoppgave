@@ -10,8 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-library(VGAM)
-library(distr)
+library(VGAM) # plgamma, distribution functions of log-gamma
+library(distr) # igamma, to calculate MLE of alpha
+library(cubature) # adaptIntegrate, to calculate multidimensional integrals
 ```
 
 ```{r}
@@ -33,10 +34,12 @@ Pretty sure we did something similar in StatInf.
 
 # Everything is for the Gamma function - test for shape parameter
 
+
 ```{r}
 # find critical values for c
 log_likelihood <- function(t, alpha){
-  alpha * sum(t) - length(t) * digamma(alpha)
+  # TODO : For more than one value t
+  (alpha-1) * t -  lgamma(alpha)
 }
 
 likelihood_ratio_calc <- function(t, alpha_0){
@@ -61,8 +64,6 @@ t = log(1)
 log_likelihood(t, 2)
 likelihood_ratio_calc(t, 2)
 
-likelihood_ratio_calc(log(3), 2)
-
 find_t_dual(t, 2)
 
 ## actually finding the critical value c
@@ -77,7 +78,15 @@ find_extremity_prob(t, 2)
 find_critcal_vals <- function(significance_level, alpha_0){
   modified_func <- function(t) {find_extremity_prob(t, alpha_0) - significance_level}
   
-  t1 <- uniroot(modified_func, lower = -10, upper = log(1))$root
+  print(modified_func(-5))
+  print(modified_func(0))
+  
+  # NOTE : It is hard to find a good upper boundary for where to start the search for t1. 
+  ## This is because find_t_dual requires that you propose a value lower than corresponding t2, (ie lower than the t maximizing the LR). 
+  ## At the same time it must be large enough that it contains the t1 that gives the wanted significance level
+  ## We have choosen upper = 0 for significance level = 0.05
+  
+  t1 <- uniroot(modified_func, lower = -5, upper = 0)$root
   t2 <- find_t_dual(t1, alpha_0)
   
   c1 = likelihood_ratio_calc(t1, alpha_0)
@@ -99,9 +108,9 @@ find_power <- function(alpha_true, t1, t2){
 ```
 
 ```{r}
-start = 1.8
-end = 2.2
-n = 21
+start = 1.9
+end = 2.1
+n = 41
 
 alpha_values <- seq(start, end, length.out = n)
 
@@ -109,10 +118,108 @@ pwr_values <- sapply(alpha_values, find_power, t1 = crit_vals[1], t2 = crit_vals
 
 plot(alpha_values, pwr_values)
 ```
+# Trying to calculate CDF for sum(T)
+
+n = 2
+$P(\bar{T} < t) = \int_{-\infty}^{t} \int_{-\infty}^{\infty} f_{T_1}(u) f_{T_2}(v-u) du \ dv $
 
 ```{r}
+# Define the integrand
+integrand <- function(x, alpha, beta = 1) {
+  u <- x[1]
+  v <- x[2]
+  dlgamma(u, shape = alpha, scale = 1/beta) * dlgamma(v-u, shape = alpha, scale = 1/beta)
+}
 
+# Parameters
+alpha <- 2
+t <- 0
+
+# Perform the double integration
+result <- adaptIntegrate(integrand, lowerLimit = c(-Inf, -Inf), upperLimit = c(t, Inf), alpha = alpha)
+
+cat("Integral result:", result$integral, "\nError estimate:", result$error, "\n")
 ```
+
+## Lots of WIP and intresting findings by running this code block
+
+```{r}
+log_gamma_integrand<-function(x, alpha, beta = 1){
+  product <- 1
+  term <- 0
+  n <- length(x)
+  # This loop might be a bit inefficient
+  for (i in 1:n) {
+    term <- dlgamma(x[i] - sum(x[0:(i-1)]), shape = alpha, scale = 1/beta)
+    product <- product * term
+  }
+  product
+}
+
+plgamma_mult<-function(t, integrand, n, alpha, beta = 1){
+  lower = rep(-Inf, n)
+  upper = rep(Inf, n)
+  upper[1] = t*n
+  
+  pT <- adaptIntegrate(integrand, lowerLimit = lower, upperLimit = upper, alpha = alpha, beta = beta)
+}
+
+# Parameters
+alpha <- 2
+t <- -0.5
+n <- 2
+
+result2 <- plgamma_mult(t, log_gamma_integrand, n, alpha)
+
+result2
+```
+
+## Trying to get WIP results for the power function for n = 3
+
+```{r}
+find_extremity_prob_mult <- function(t, alpha_0, n){
+  t_dual <- find_t_dual(t, alpha_0)
+  print(t_dual)
+  1 - plgamma_mult(t_dual, log_gamma_integrand, n = n, alpha = alpha_0) + plgamma_mult(t, log_gamma_integrand, n = n, alpha = alpha_0)
+}
+
+find_extremity_prob_mult(t, 2, 2)
+
+find_critcal_vals_mult <- function(significance_level, alpha_0, n){
+  modified_func <- function(t) {find_extremity_prob_mult(t, alpha_0, n) - significance_level}
+  
+  print(modified_func(-5))
+  print(modified_func(0))
+  
+  # NOTE : It is hard to find a good upper boundary for where to start the search for t1. 
+  ## This is because find_t_dual requires that you propose a value lower than corresponding t2, (ie lower than the t maximizing the LR). 
+  ## At the same time it must be large enough that it contains the t1 that gives the wanted significance level
+  ## We have choosen upper = 0 for significance level = 0.05
+  
+  t1 <- sum(uniroot(modified_func, lower = -5, upper = 0)$root)
+  t2 <- sum(find_t_dual(t1, alpha_0))
+  
+  c1 = likelihood_ratio_calc(t1, alpha_0)
+  c2 = likelihood_ratio_calc(t2, alpha_0)
+  
+  c(t1, t2, c1, c2)
+}
+
+crit_vals = find_critcal_vals_mult(0.05, 2, 2)
+crit_vals
+# find critical values t1 and t2
+
+
+# find power
+find_power_mult <- function(alpha_true, t1, t2){
+  1 - plgamma_mult(t2, shape = alpha_true) + plgamma_mult(t1, shape = alpha_true)
+}
+```
+
+
+
+
+
 
 
 

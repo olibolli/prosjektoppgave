@@ -1,0 +1,241 @@
+---
+title: "gamma_shape_compare_p_vals"
+output: html_document
+---
+
+```{r}
+source("p_values_cont.R")
+
+library(expint)
+```
+
+```{r}
+beta = 2
+alpha_0 = 2 / beta
+
+pT <- function(t, shape = alpha_0, scale = beta){
+  1- gammainc(shape, exp(t)/scale)/gamma(shape)}
+
+dT <- function(t, shape = alpha_0, scale = beta){
+  exp(shape * t - exp(t) / scale) / (gamma(alpha_0) * beta^alpha_0)}
+
+intT <- function(t, shape = alpha_0, scale = beta){
+  t*exp(shape * t - exp(t) / scale) / (gamma(alpha_0) * beta^alpha_0)}
+E_T = integrate(intT, lower = -Inf, upper = Inf)$value
+E_T - log(beta)
+digamma(alpha_0)
+
+integrate(dT, lower = -Inf, upper = 1)$value
+pT(1)
+
+t_vec <- seq(-5, 5, by = 0.2)
+dt_vec <- dT(t_vec)
+
+plot(t_vec, dt_vec)
+```
+
+```{r}
+t_obs = 1
+unbiased_p_val(t_obs, pT, intT)
+tail_p_val(t_obs, pT)
+point_p_val(t_obs, dT, pT)
+```
+
+```{r}
+significance_level = 0.05
+
+crit_unbiased <- find_crit_values(unbiased_p_val, significance_value = significance_level, pT, intT, E_T, mid_point = E_T)
+crit_tail <- find_crit_values(tail_p_val, significance_value = significance_level, pT, mid_point = E_T)
+crit_point <- find_crit_values(point_p_val, significance_value = significance_level, dT, pT, E_T, mid_point = E_T)
+
+crit_unbiased
+crit_tail
+crit_point
+```
+
+```{r}
+find_power <- function(true_alpha, crit, beta = 2){
+  1 - pT(crit[2], shape = true_alpha, scale = beta) + pT(crit[1], shape = true_alpha, scale = beta)
+}
+
+alpha_values = exp(seq(-1, 1, by = 0.0002))
+
+pwr_unbiased = sapply(alpha_values, find_power, crit = crit_unbiased)
+pwr_tail = sapply(alpha_values, find_power, crit = crit_tail)
+pwr_point = sapply(alpha_values, find_power, crit = crit_point)
+```
+
+```{r}
+
+
+plot(alpha_values, pwr_unbiased, log = "x")
+plot(alpha_values, pwr_tail, log = "x")
+plot(alpha_values, pwr_point, log = "x")
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+```
+
+```{r}
+
+# Combine vectors into a dataframe
+df <- data.frame(
+ alpha_values, 
+ pwr_unbiased,
+ pwr_point,
+ pwr_tail
+)
+
+colnames(df) <- c("alpha", "UMPU", "Point", "Tail")
+
+# Reshape dataframe to long format
+df_long <- pivot_longer(df, cols = -alpha, names_to = "P_value", values_to = "value")
+
+df[13000:15000,]
+df_long
+
+# Plot using ggplot2
+ggplot(df_long, aes(x = alpha, y = value, color = P_value)) +
+ geom_line() +
+ labs(title = "Power functions - Gamma Shape parameter", x = "Log shape", y = "Power") +
+  scale_x_log10()+
+ theme(title = element_text(size = 14),
+       axis.title = element_text(size = 14),
+       legend.text = element_text(size = 14))
+
+
+
+```
+
+```{r}
+t = 10
+igamma(t)
+```
+
+
+```{r}
+library(distr) # igamma, to calculate MLE of alpha
+
+# find critical values for c
+log_likelihood <- function(t, alpha, beta = 2){
+  # TODO : For more than one value t
+  (alpha-1) * log(t) - t/beta + alpha*log(beta) - log(gamma(alpha))
+}
+
+likelihood_ratio_calc <- function(t, alpha_0){
+  alpha_hat = igamma(mean(log(t)))
+  log_lr =  log_likelihood(t, alpha_hat) - log_likelihood(t, alpha_0)
+  log_lr
+}
+
+## finding t_dual, i.e. the value of t that gives the same LR value
+find_t_dual <- function(t, alpha_0, scale, beta = 2){
+  # Assuming t_dual is higher than t
+  # TODO : finding a way to make it go both ways
+  lr <- likelihood_ratio_calc(t, alpha_0)
+  
+  modified_func <- function(x) {likelihood_ratio_calc(x, alpha_0) - lr}
+  t_mode = exp(alpha_0)
+  if(t < t_mode){
+    t_dual <- uniroot(modified_func, lower = t + 1e-4, upper = 8)$root
+  }
+  else{
+    t_dual <- uniroot(modified_func, lower = 1e-4, upper = t - 1e-4)$root
+  }
+  t_dual
+}
+
+t = 3
+alpha = 1
+log_likelihood(t, alpha)
+likelihood_ratio_calc(5, alpha)
+
+find_t_dual(t, alpha)
+
+## actually finding the critical value c
+
+find_extremity_prob <- function(t, alpha_0){
+  t_dual <- find_t_dual(t, alpha_0)
+  t_mode = exp(alpha_0)
+  if(t < t_mode){
+    1 - pT(t_dual, shape = alpha_0) + pT(t, shape = alpha_0)
+  }
+  else{
+    1 - pT(t, shape = alpha_0) + pT(t_dual, shape = alpha_0)
+  }
+}
+
+find_extremity_prob(t, alpha)
+
+find_critcal_vals <- function(significance_level, alpha_0){
+  modified_func <- function(t) {find_extremity_prob(t, alpha_0) - significance_level}
+  
+  
+  # NOTE : It is hard to find a good upper boundary for where to start the search for t1. 
+  ## This is because find_t_dual requires that you propose a value lower than corresponding t2, (ie lower than the t maximizing the LR). 
+  ## At the same time it must be large enough that it contains the t1 that gives the wanted significance level
+  ## We have choosen upper = 0 for significance level = 0.05
+  
+  t1 <- uniroot(modified_func, lower = 1, upper = 5)$root
+  t2 <- find_t_dual(t1, alpha_0)
+  
+  c1 = likelihood_ratio_calc(t1, alpha_0)
+  c2 = likelihood_ratio_calc(t2, alpha_0)
+  
+  c(t1, t2, c1, c2)
+}
+
+crit_vals = find_critcal_vals(0.05, alpha)
+crit_vals
+# find critical values t1 and t2
+
+
+# find power
+find_power <- function(alpha_true, t1, t2){
+  1 - plgamma(t2, shape = alpha_true) + plgamma(t1, shape = alpha_true)
+}
+
+```
+
+```{r}
+alpha_values
+
+pwr_lrt <- sapply(alpha_values, find_power, t1 = crit_vals[1], t2 = crit_vals[2])
+
+```
+
+```{r}
+# Combine vectors into a dataframe
+df <- data.frame(
+ alpha_values, 
+ pwr_unbiased,
+ pwr_lrt
+)
+
+colnames(df) <- c("alpha", "UMPU", "LRT")
+
+# Reshape dataframe to long format
+df_long <- pivot_longer(df, cols = -alpha, names_to = "Method", values_to = "value")
+
+df
+df_long
+
+# Plot using ggplot2
+ggplot(df_long, aes(x = alpha, y = value, color = Method)) +
+ geom_line() +
+ labs(title = "Power functions - Gamma Shape parameter", x = "True Parameter Alpha", y = "Power") +
+ theme_minimal()
+```
+
+
+
+
+
+
+
+
+
+
+

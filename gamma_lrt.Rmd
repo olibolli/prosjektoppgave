@@ -27,9 +27,7 @@ mle_gamma_est <- function(x_vec){
   high_search = max(10* sum(x_vec), 10)
   vals = c(0, high_search)
   # calculate sum(log(x_vec)) outside likelihood_der
-  x_n = length(x_vec)
-  x_prod = prod(x_vec)
-  optimum_vals = optimize(neg_likelihood, interval = vals, x_n = x_n, x_prod = x_prod)
+  optimum_vals = optimize(neg_log_likelihood, interval = vals, x_n = length(x_vec), x_log_sum = sum(log(x_vec)))
   optimum_vals
 }
 
@@ -41,8 +39,8 @@ neg_likelihood <- function(alpha, x_n, x_prod){
   - gamma(alpha)^(-x_n)*(x_prod)^alpha
 }
 
-neg_log_likelihood <- function(alpha, x_sum, x_n){
-  x_n * lgamma(alpha) - alpha * x_sum
+neg_log_likelihood <- function(alpha, x_log_sum, x_n){
+  x_n * lgamma(alpha) - alpha * x_log_sum
 }
 
 likelihood_der<-function(alpha, x_vec){
@@ -60,10 +58,11 @@ simulate_one_eta <- function(n, alpha_sim, alpha_0){
   mle_vals = mle_gamma_est(x_vec)
   
   # calculate eta stat
-  neg_ll_H1 = mle_vals$objective
-  ll_ratio = - gamma(alpha_0)^(-n)*(prod(x_vec))^alpha_0 / neg_ll_H1
+  neg_l_H1 = mle_vals$objective
+  log_l_diff = (n * lgamma(alpha_0) - alpha_0 * sum(log(x_vec)) ) - neg_l_H1
+  likeli_ratio = exp(-log_l_diff)
   
-  ll_ratio
+  likeli_ratio
 }
 
 simulate_one_eta(1, alpha_sim = 2, alpha_0 = 2)
@@ -78,8 +77,8 @@ find_critical_values<-function(m, n, alpha_0){
   for(j in 1:m){
     eta_vec[j] = simulate_one_eta(n, alpha_0, alpha_0)
   }
-  hist(eta_vec)
   # Find the eta s.t. 0.05 of the simulated values are below it
+  hist(eta_vec)
   eta_sorted = sort(eta_vec)
   alpha = 0.05
   return(eta_sorted[floor(m*alpha)])
@@ -158,7 +157,7 @@ profvis({
 
   crit_unb = find_critical_values(10000, 1, 2)
   # getting exact critical value is not important because the test is UMPU
-  pwr_vec_unb = power_vec_calc(1e5, 1, 2, alpha_vec_unb, crit_unb)
+  pwr_vec_unb = power_vec_calc(1e6, 1, 2, alpha_vec_unb, crit_unb)
 
   plot(alpha_vec_unb, pwr_vec_unb, log = 'x')
 })

@@ -60,6 +60,7 @@ observator_p_val <- function(w_statistic, y_vec, n_vec){
   
   wy = w_statistic(y_vec, n_vec)
   if(is.nan(wy)){
+    print("hi")
     p_val = 0
     return(p_val)
   }
@@ -76,17 +77,12 @@ observator_p_val <- function(w_statistic, y_vec, n_vec){
       x_2 = y_cond - x_0 - x_1
       x_vec = c(x_0, x_1, x_2)
       wx = w_statistic(x_vec, n_vec)
+      
       if(is.nan(wx)){
-        prob_add = dmvhyper(x_vec, n_vec, y_cond)
-        if(is.nan(prob_add)){
-          
-        }
-        else{
-          p_val = p_val + prob_add
-        }
+        
       }
       else if (!(wx > wy)){
-        p_val = p_val + dmvhyper(x_vec, n_vec, y_cond)
+        p_val = add_tri_hyper_prob(p_val, x_vec, n_vec, y_cond)
       }
     }
   }
@@ -95,16 +91,28 @@ observator_p_val <- function(w_statistic, y_vec, n_vec){
 
 ## Point p-val
 point_prob<- function(x_vec, n_vec){
-  dmvhyper(x_vec, n_vec, sum(x_vec), log = TRUE)
+  dmvhyper(x_vec, n_vec, sum(x_vec))
 }
 
 ## Tail p-val
 
 
 ## Dist p-val
-dist_p_val<- function(y_0, y_1, y_2, theta_0, n_0, n_1, n_2){
-  y_cond = y_0 + y_1 + y_2
-  
+johnssen_obsv<- function(x_vec, n_vec){
+  p_est = n_vec / sum(n_vec)
+  obsv = 0*(x_vec[1]- p_est[1]) + 1*(x_vec[2]-p_est[2]) + 2*(x_vec[3]-p_est[3])
+  return(-obsv) # Needs to take negative so small values give rejection
+}
+
+add_tri_hyper_prob <- function(prob_curr, x_vec, n_vec, y_cond){
+  prob_add = dmvhyper(x_vec, n_vec, y_cond)
+  if(is.nan(prob_add)){
+    print("ha")
+    return(prob_curr)
+  }
+  else{
+    return(prob_curr + prob_add)
+  }
 }
 
 power_calc_null_hyp_true <- function(method, y_cond, n_vec, alpha){
@@ -125,7 +133,7 @@ power_calc_null_hyp_true <- function(method, y_cond, n_vec, alpha){
       x_vec = c(x_0, x_1, x_2)
       wx = observator_p_val(method, x_vec, n_vec)
       if (!(wx > alpha)){
-        power = power + dmvhyper(x_vec, n_vec, y_cond)
+        power = add_tri_hyper_prob(power, x_vec, n_vec, y_cond)
       }
     }
   }
@@ -163,6 +171,8 @@ observator_p_val(point_prob, c(2, 0, 0), c(4, 4, 4))
 observator_p_val(point_prob, c(3, 0, 0), c(4, 4, 4))
 
 observator_p_val(point_prob, c(4, 0, 0), c(4, 4, 4))
+
+observator_p_val(point_prob, c(1, 0, 1), c(16, 8, 1))
 ```
 
 ```{r}
@@ -171,29 +181,34 @@ power_calc_null_hyp_true(point_prob, 3, c(4, 4, 4), 5e-2)
 power_calc_null_hyp_true(point_prob, 4, c(4, 4, 4), 5e-2)
 
 power_calc_null_hyp_true(point_prob, 20, c(10, 10, 10), 5e-2)
+
+power_calc_null_hyp_true(point_prob, 1, c(16, 8, 1), 5e-2)
 ```
 
 ```{r}
-n_tot = 100
-gwas_vars = define_gwas_vars(n = n_tot, maf = 0.1, alpha = 5e-2)
-n_vec = gwas_vars[[1]]
-alpha = gwas_vars[[2]]
-print(n_vec)
-print(alpha)
+n_vec = c(810, 180, 10) # corresponds to n_tot = 100 and maf = 0.1
+alpha = 5e-2
 
-print(c(81, 18, 1))
-
-y_range = 1:(n_tot/2)
+y_range = 1:500
 pwr_vec = c()
 for(y_tot in y_range){
-  print(y_tot)
   pwr_y = power_calc_null_hyp_true(point_prob, y_tot, n_vec, alpha)
-  #pwr_vec = c(pwr_vec, pwr_y)
+  pwr_vec = c(pwr_vec, pwr_y)
 }
 
-#plot(y_range, pwr_vec)
+plot(y_range, pwr_vec)
 ```
 
+```{r}
+n_vec = c(810, 180, 10) # corresponds to n_tot = 100 and maf = 0.1
+alpha = 5e-2
 
+y_range_joh = 1:500
+pwr_vec_joh = c()
+for(y_tot in y_range_joh){
+  pwr_y_joh = power_calc_null_hyp_true(johnssen_obsv, y_tot, n_vec, alpha)
+  pwr_vec_joh = c(pwr_vec_joh, pwr_y_joh)
+}
 
-
+plot(y_range_joh, pwr_vec_joh)
+```

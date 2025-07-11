@@ -220,4 +220,3 @@ plot(n_0_vec, tail_ratio, log = "x")
 # Find a and b such that dgamma(a) = dgamma(b) and size alpha
 ?plot
 ```
-

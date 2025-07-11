@@ -1,0 +1,150 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(glue)
+```
+
+
+```{r}
+# think about which datatypes you want
+
+calc_phi_of_alpha_binom<-function(n, p0){
+  x_vec <- 0:n
+  
+  df_gamma <- data.frame(matrix(0, nrow = n + 1, ncol = n+1)) # We will have n -1 "breaks of the piecewise function, but we want to also define the two edges completely, thus nrow = n-1+2
+  alpha_vec <- x_vec*0
+  for(i in x_vec){
+    colnames(df_gamma)[1 + i] <- i
+  }
+  
+  # Setting start conditions we calculate for
+  x_l = 0
+  x_r = n
+  both_start_at_zero = TRUE
+  
+  # Calculate the expected value of X
+  E_X = n*p0
+  
+  num_breaks = n-1
+  for(i in 1:num_breaks){
+    
+    # Calculate the time until gamma_l = 1 and gamma_r = 1 under current growth
+    ## stigning : dgamma_l/dalpha = (x_r - E_X)/(dP(x_l) * (x_r -x_l))
+    ## stigning : dgamma_r/dalpha = (E_X - x_l)/(dP(x_r) * (x_r -x_l))
+    if(x_r == E_X){
+      # This will only happen when there is only one value with non-zero probability left to add
+      break
+    }
+    
+    y_l = (1-df_gamma[i, 1 + x_l])*dbinom(x_l, n, p0)*(x_r - x_l)/(x_r - E_X)
+    y_r = (1-df_gamma[i, 1 + x_r])*dbinom(x_r, n, p0)*(x_r - x_l)/(E_X - x_l)
+      
+    # Determine which of gamma_x_l or gamma_x_r get set to 1
+    
+    
+    if(y_l < y_r){
+      df_gamma[(i +1):(n+1), 1 + x_l] = 1
+        
+      # calculate increase in gamma_r
+      dgamma_r_dalp = (1-df_gamma[i, 1 + x_r])/y_r
+      df_gamma[1 + i, 1 + x_r] = df_gamma[i, 1 + x_r] + y_l*dgamma_r_dalp
+        
+      x_l = x_l + 1
+      both_start_at_zero = FALSE
+    }
+    else if (y_l == y_r){
+      df_gamma[(i +1):(n+1), 1 + x_l] = 1
+      df_gamma[(i +1):(n+1), 1 + x_r] = 1
+        
+      x_l = x_l + 1
+      x_r = x_r - 1
+      both_start_at_zero = TRUE
+    }
+    else if(is.na(y_l)|is.na(y_r)){
+      stop("error : one or both y_l, y_r is NA")
+    }
+    else{
+      df_gamma[(1+i):(n+1), 1 + x_r] = 1
+        
+      # calculate increase in gamma_r
+      dgamma_l_dalp = (1-df_gamma[i, 1 + x_l])/y_l
+      df_gamma[1 + i, 1 + x_l] = df_gamma[i, 1 + x_l] + y_r*dgamma_l_dalp
+        
+      x_r = x_r - 1
+      both_start_at_zero = FALSE
+    }
+  
+      
+    ## first_fill = x_r or x_l , in_between = the other
+    # Calculation of the other gamma val and alpha_break
+    # Change values
+    ## df_gamma[1+i, 1 +change] = 1
+    ## df_gamma[1+i, 1 +in_between] = gamma_partial
+    
+    # ?? : Why this line
+    alpha_vec[1+i] = sum(sapply(x_vec, alpha_helper, i, df_gamma, n, p0))/E_X
+  }
+  
+  
+  df = data.frame(alpha_vec, df_gamma)
+  df[n+1, 1:(n+1)] = 1
+  return(df)
+}
+
+alpha_helper <- function(x, break_iter, df_gamma, n, p0){
+  df_gamma[1 + break_iter, 1 + x]*dbinom(x, n, p0)*x
+}
+n = 3
+dphi <- calc_phi_of_alpha_binom(n, 1/2)
+```
+
+```{r}
+exp_p_val<- function(alpha_vec, gam_vec, n){
+  i_vec = 1:n 
+  sum(sapply(i_vec, exp_p_val_helper, alpha_vec, gam_vec))
+}
+
+exp_p_val_helper <- function(i, alpha_vec, gam_vec){
+  alpha_diff = alpha_vec[i+1] - alpha_vec[i]
+  if(alpha_diff == 0){
+    return(0)
+  }
+  else{
+    c_i = (gam_vec[i+1] - gam_vec[i])/alpha_diff
+    return(c_i*((alpha_vec[i+1])^2 -(alpha_vec[i])^2)/2)
+  }
+}
+
+x = 3
+exp_p_val(dphi[,1], dphi[,2+x], n)
+```
+
+```{r}
+fuzzy_p_val_exp <- function(x, n, p0){
+  df <- calc_phi_of_alpha_binom(n, p0)
+  
+  exp_p_val(df[,1], df[, 2 +x], n)
+}
+```
+
+
+# Evaluating the moments of this p-value under the binomial null hypothesis
+```{r}
+
+moment <- function(func, order, n, p0){
+  x_vec = 0:n
+  sum(sapply(x_vec, moment_helper, func, order, n, p0))
+}
+
+moment_helper <- function(x, func, order, n, p0){
+  func(x, n, p0)^order * dbinom(x, n, p0)
+}
+
+moment(fuzzy_p_val_exp, 3, 10, 7/10)
+```
+
+
+

@@ -1,0 +1,105 @@
+---
+title: "gamma_scale_compare_p_vals"
+output: html_document
+---
+
+```{r}
+source("p_values_cont.R")
+
+```
+
+```{r}
+beta_0 = 2
+n = 1
+alpha = n
+
+pT <- function(t, shape = alpha, scale = beta_0){
+  pgamma(t, shape = shape, scale = scale)}
+dT <- function(t, shape = alpha, scale = beta_0){
+  dgamma(t, shape = shape, scale = scale)}
+intT <- function(t, shape = alpha, scale = beta_0){
+  t*dgamma(t, shape = shape, scale = scale)}
+E_T = integrate(intT, lower = 0, upper = Inf)$value
+
+t_vec <- seq(0, 2*n*beta_0, by = 0.2)
+dt_vec <- dT(t_vec)
+
+
+plot(t_vec, dt_vec)
+```
+
+```{r}
+t_obs = 3
+unbiased_p_val(t_obs, pT, intT, E_T)
+tail_p_val(t_obs, pT)
+point_p_val(t_obs, dT, pT)
+```
+
+```{r}
+significance_level = 0.05
+
+crit_unbiased <- find_crit_values(unbiased_p_val, significance_value = significance_level, pT, intT, E_T, mid_point = E_T)
+crit_tail <- find_crit_values(tail_p_val, significance_value = significance_level, pT, mid_point = E_T)
+crit_point <- find_crit_values(point_p_val, significance_value = significance_level, dT, pT, mid_point = E_T)
+
+crit_unbiased
+crit_tail
+crit_point
+```
+
+```{r}
+find_power <- function(true_beta, crit, alpha = n){
+  1 - pT(crit[2], shape = alpha, scale = true_beta) + pT(crit[1], shape = alpha, scale = true_beta)
+}
+
+find_power(2.3, crit_unbiased)
+
+beta_values = 2*exp(seq(-1.75, 1.75, by = 0.001))
+
+pwr_unbiased = sapply(beta_values, find_power, crit = crit_unbiased)
+pwr_tail = sapply(beta_values, find_power, crit = crit_tail)
+pwr_point = sapply(beta_values, find_power, crit = crit_point)
+```
+
+```{r}
+
+plot(beta_values, pwr_unbiased)
+plot(beta_values, pwr_tail)
+plot(beta_values, pwr_point)
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+```
+
+```{r}
+
+# Combine vectors into a dataframe
+df <- data.frame(
+ beta_values, 
+ pwr_unbiased,
+ pwr_point,
+ pwr_tail
+)
+
+colnames(df) <- c("beta", "UMPU", "Point", "Tail")
+
+# Reshape dataframe to long format
+df_long <- pivot_longer(df, cols = -beta, names_to = "P_value", values_to = "value")
+
+df[800:1800,]
+df_long
+
+# Plot using ggplot2
+ggplot(df_long, aes(x = beta, y = value, color = P_value)) +
+ geom_line() +
+ labs(title = "Power functions - Exponential Scale parameter, n = 5", x = "Log scale", y = "Power") +
+  scale_x_log10()+
+ theme(title = element_text(size = 14),
+       axis.title = element_text(size = 14),
+       legend.text = element_text(size = 14))
+
+
+
+```

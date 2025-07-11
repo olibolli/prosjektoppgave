@@ -1,0 +1,201 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+source("p_vals_disc.R")
+library(rlang)
+```
+
+```{r}
+fisher_test_functions <- function(y, n1, n2){
+  dT = function(x){
+    if(x < 0){
+      return(0)
+    }
+    dhyper(x, m = n1, n = n2, k = y)
+  }
+  pT = function(x){
+    if(x < 0){
+      return(0)
+    }
+    phyper(x, m = n1, n = n2, k = y)
+  }
+  intT = function(x){
+    if(x < 0){
+      return(0)
+    }
+    x*dhyper(x, m = n1, n = n2, k = y)
+  }
+  E_T = sum(sapply(0:y, intT))
+  
+  bndry_min = -1
+  bndry_max = y + 1
+  all_functions = c(dT, pT, intT, E_T, bndry_min, bndry_max)
+  return(all_functions)
+}
+
+fisher_test_functions(3, 4, 4)
+```
+
+```{r}
+t_obs = 1
+inject(unbiased_p_val(t_obs, !!!fisher_test_functions(10, 20, 25)))
+
+```
+
+```{r}
+# What is the assumption :  x1 ~ bin(p, n1), x2 ~ bin(p, n2), y = x1 + x2
+# Iterate over all possible outcomes of y
+# For each y get the critical values
+## Iterate over : discretization of p2 with set p1
+### Then add the probability of x1 being more extreme than c1, c2
+### Can be done by sum(dbinom(x1, p1, n1)*dbinom(y-x1, p2, n2))
+
+```
+
+
+```{r}
+bisection_discrete <- function(f, lower, upper, ...){
+  endCond = FALSE
+  
+  lower = round(lower)
+  upper = round(upper)
+  
+  fl = f(lower, ...)
+  fu = f(upper, ...)
+  
+  
+  if(fl * fu > 0){
+    print("Edge case")
+    # want to check if we want to add the whole tail
+    
+    # left side
+    fl_minus = f(lower -1, ...)
+    
+    if(fl_minus * fl < 0){
+      
+      if(fl > 0){
+        return(lower)
+      }
+      else{
+        return(lower -1)
+      }
+    }
+    
+    # right side
+    fu_plus = f(upper+1, ...)
+    if(fu * fu_plus < 0){
+      
+      if(fu > 0){
+        return(upper)
+      }
+      else{
+        return(upper +1)
+      }
+    }
+    
+    # Other handling
+    stop("Error : The endpoints are not of opposite sign")
+  }
+  while(!endCond){
+    mid = round((lower + upper)/ 2)
+    fm = f(mid, ...)
+    if(fm * fl > 0){
+      lower = mid
+      fl = fm
+    }
+    else{
+      upper = mid
+      fu = fm
+    }
+    
+    if(upper - lower == 1){
+      endCond = TRUE
+    }
+  }
+  
+  if(fl < 0){
+    return(lower)
+  }
+  else{
+    return(upper)
+  }
+  # add [1] if low value is wanted and [2] if high value is wanted
+}
+
+# 1. Find the critical values of t such that the p-values are below the significance level
+find_crit_values <- function(method, significance_value,  ..., bndry_min, bndry_max, mid_point){
+  
+  modified_func <- function(t, ...){method(t, ...) - significance_value}
+  # TODO : Update so we get automatic guess for mid-point
+  t_1 <- bisection_discrete(modified_func, lower = bndry_min, upper = floor(mid_point), ...)
+  print("critical vals 1")
+  print(t_1)
+  t_2 <- bisection_discrete(modified_func, lower = ceiling(mid_point), upper = bndry_max, ...)
+  print(t_2)
+  return(c(t_1, t_2))
+}
+
+calc_power_fisher_exact <- function(method, significance_value, p, n1, n2, N){
+  p1 = p
+  i_vec = 1:(N)
+  p2_vec = (1:N)/N
+  power_vec = p2_vec*0 # just creating a vector like i_vec and p2_vec which is zero everywhere
+  
+  y_vec = 1:(n1+n2-1)
+  
+  for(y in y_vec){
+    fisher_funcs <- fisher_test_functions(y, n1, n2)
+    bndry_min <- fisher_funcs[[5]]
+    bndry_max <- fisher_funcs[[6]]
+    mid_point <- fisher_funcs[[4]] # gets the E_T argument from the functions for the situation
+    
+    crit_vals <- inject(find_crit_values(method, significance_value, !!!fisher_funcs, bndry_min = bndry_min, bndry_max = bndry_max, mid_point = mid_point))
+    print("Critical values at given level are :")
+    print(crit_vals)
+    x1_vec = c(0:crit_vals[1], crit_vals[2]:(n1+n2))
+    for(i in i_vec){
+      true_probability_fisher <- function(x1){
+        dbinom(x1, n1, p1)*dbinom(y-x1, n2, p2_vec[i])
+      }
+      power_p2_y <- sum(sapply(x1_vec, true_probability_fisher))
+      if(i == 1){
+        print("---")
+        print(power_p2_y)
+      }
+      power_vec[i] = power_vec[i] + power_p2_y
+    }
+  }
+  return(power_vec)
+}
+
+
+```
+
+```{r}
+t_obs = 5
+inject(unbiased_p_val(t_obs, !!!fisher_test_functions(10, 2500, 10000)))
+```
+
+
+```{r}
+sign_value = 0.15
+p = 0.2
+n1 = 6
+n2 = 8
+
+pwr_fish_unb <- calc_power_fisher_exact(unbiased_p_val, sign_value, p, n1, n2, N = 10)
+pwr_fish_unb
+```
+
+```{r}
+paste0("Hey,", 4)
+```
+
+
+
+
+
+
